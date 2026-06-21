@@ -78,3 +78,34 @@ Results:
 Known risks / next step:
 - ...
 ```
+
+---
+
+## Testing harness round — 2026-06-21
+
+**Base file:** `the_black_bird_v5_6_nightly.html`
+
+**Decision:** Add a Playwright smoke test harness. No app behavior changed.
+
+**Changed files:**
+- `package.json` — created; added `@playwright/test` dev dep, `d3` dep (local CDN fallback), npm scripts: `test`, `test:headed`, `test:report`
+- `playwright.config.js` — created; Chromium-only, 90s global timeout, pre-installed binary path
+- `tests/black-bird-smoke.spec.js` — created; 5 scenarios: desktop onboarding, Field refit, dense aperture, mobile Field, mobile Read
+- `TESTING_REPORT.md` — populated with full results
+- `BLACK_BIRD_DECISIONS_CHANGELOG(1).md` — this entry
+
+**Commands run:**
+- `npm install`
+- `PLAYWRIGHT_BROWSERS_PATH=/opt/pw-browsers npx playwright test` → 5 passed (1.5 min)
+
+**Test results:**
+- S1 Desktop onboarding: NEEDS HUMAN REVIEW — transitions work; Black Bird active in reader; left-margin of active node label is 2 px (below 80 px threshold); screenshot captured
+- S2 Desktop Field refit: PASS — 44/44 nodes inside viewport on all 3 rounds (100%)
+- S3 Dense aperture: PASS — 30 separated nodes after focus; aperture note: `usable and visually calm`
+- S4 Mobile Field: PASS — graph height 594 px; reader hidden; bottom nav visible
+- S5 Mobile Read: PASS — reader height 544 px; scrollable; graph hidden
+
+**Known issues / environment notes:**
+- D3 CDN blocked (403) in this remote environment. Tests intercept with local `d3@7.9.0`.
+- D3 force-sim NaN console errors on startup are filtered as known noise; not real errors.
+- S1 left-margin measurement needs human review — label bounding box may not reflect rendered node circle position accurately.
