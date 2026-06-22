@@ -23,9 +23,15 @@ D3 was previously loaded from cdnjs.cloudflare.com. As of 2026-06-22, D3 is vend
 
 - `archive/old-builds/the_black_bird_v5_6_nightly.html` — previous root artifact, retained for reference
 
+## Final visual QA status (2026-06-22)
+
+Smoke tests: 5/5 PASS. Screenshots in `qa/final-visual-qa/`.
+
+Mobile Field surface locator bug was fixed in test 4: the bottom-nav `[data-mobile="field"]` button is now used instead of the hidden `#fieldBtn` inside `.map-wrap`.
+
 ## Known risks
 
-- Mobile Read/Field switching needs real-device QA.
-- Local aperture needs visual tuning around very dense neighborhoods.
+- Desktop graph appears slightly small during field refit in split view; camera centering could be tightened.
+- Local aperture needs visual tuning around very dense neighborhoods (human review required on real device).
 - Desktop Black Bird first focus should be checked on the laptop viewport.
 - Google Fonts is still loaded from CDN; not critical for app function.

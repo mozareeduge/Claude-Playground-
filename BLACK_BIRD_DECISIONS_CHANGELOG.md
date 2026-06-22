@@ -50,6 +50,37 @@ Files expected:
 - `TESTING_REPORT.md`
 - `BLACK_BIRD_DECISIONS_CHANGELOG.md`
 
+## 2026-06-22 — Final visual QA and mobile Field surface fix
+
+Base file: `index.html`
+
+Decision:
+- Fixed test 4 locator: the mobile Field button inside `.map-wrap` (`#fieldBtn`) is hidden when `surface-read` is active, so `isVisible()` returned false and the click was skipped. Updated the locator to `[data-mobile="field"]` (bottom-nav Field button), which is always visible on mobile.
+- Increased the post-click wait from 600ms to 800ms to ensure surface transition completes before screenshot.
+- Tightened the mobile-04 assertion: `#mapWrap` height must now exceed 400px (full-height graph surface) rather than 200px.
+
+Files changed:
+- `tests/black-bird-smoke.spec.js` — mobile Field button locator fix
+
+Commands run:
+- `npm test` — 5/5 passed
+
+Screenshots saved:
+- `qa/final-visual-qa/` — all 9 smoke screenshots
+
+Visual QA summary:
+- Desktop threshold: PASS — centered card, no noise.
+- Desktop after onboarding: PASS — graph centered in field, onboarding prompt visible.
+- Desktop field refit ×3: PASS — graph visible in split view (≥85% nodes in viewport).
+- Desktop dense aperture: PASS — reader pane + focused state screenshot captured.
+- Mobile Field surface: FIXED — now correctly shows full-height graph-only surface with bottom nav.
+- Mobile Read surface: PASS — reader occupies full surface, bottom nav visible and clickable.
+
+Known risks:
+- Desktop graph appears slightly small in split view during field refit; camera centering could be tightened in a later round.
+- Local aperture visual quality still requires human review on real devices.
+- Google Fonts still loaded from CDN.
+
 ## 2026-06-22 — Canonical artifact and changelog cleanup
 
 Base file:

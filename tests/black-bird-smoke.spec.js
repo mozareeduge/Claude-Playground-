@@ -103,19 +103,19 @@ test.describe('Black Bird smoke tests', () => {
       await page.waitForTimeout(600);
     }
 
-    const fieldBtn = page.locator('button', { hasText: /field/i }).first();
-    if (await fieldBtn.isVisible()) await fieldBtn.click();
-    await page.waitForTimeout(600);
+    // Use the bottom-nav Field button (the map-tools #fieldBtn is hidden in surface-read)
+    const mobileFieldBtn = page.locator('[data-mobile="field"]');
+    if (await mobileFieldBtn.isVisible()) await mobileFieldBtn.click();
+    await page.waitForTimeout(800);
 
     await page.screenshot({ path: 'test-results/black-bird-smoke/mobile-04-field-surface.png' });
 
+    // In surface-field on mobile, map-wrap takes full height and panel is hidden
     const mapWrap = page.locator('#mapWrap');
     const box = await mapWrap.boundingBox();
-    // map-wrap should be visible and occupy at least a third of the mobile viewport height
     if (box) {
-      expect(box.height).toBeGreaterThan(200);
+      expect(box.height).toBeGreaterThan(400);
     } else {
-      // Fall back to checking the SVG is present in the DOM
       const svgCount = await page.locator('#graphSvg').count();
       expect(svgCount).toBeGreaterThan(0);
     }
