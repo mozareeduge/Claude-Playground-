@@ -79,3 +79,19 @@ Stable final QA screenshots saved to: `qa/final-visual-qa/`
 | `desktop-03-dense-aperture.png` | Graph after focus (aperture active) |
 | `mobile-04-field-surface.png` | Mobile graph-only field surface |
 | `mobile-05-read-surface.png` | Mobile reader surface |
+
+## Desktop Composition Polish Round (2026-06-22)
+
+Root cause: `returnToField()` restarted the D3 force simulation via `measureGraph()`, causing node drift during the 850ms camera animation. Cluster forces (lyric, irish) pull nodes toward the lower portion of the viewport, resulting in lower-left bias.
+
+Fix: Replaced `measureGraph()` call in desktop path of `returnToField()` with inline dimension measurement that does not restart the simulation.
+
+Composition measurements after fix (1440×900, `qa/desktop-composition-polish/`):
+
+| Refit | dx (horiz, ±12% limit) | dy (vert, ±14% limit) | Status |
+|---|---|---|---|
+| 1 | +7.1% | +7.4% | PASS |
+| 2 | -7.6% | +12.2% | PASS |
+| 3 | +3.5% | +0.4% | PASS |
+
+All 5 smoke tests: PASS (5/5).

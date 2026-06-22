@@ -111,6 +111,32 @@ Decisions:
 Known risks / next step:
 - None introduced. Existing risks unchanged (mobile QA, aperture tuning, Google Fonts CDN).
 
+## 2026-06-22 — Desktop Field refit composition fix
+
+Base file: `index.html`
+
+Decision:
+- Root cause identified: `returnToField()` called `measureGraph()` which restarted the D3 force simulation with `sim.alpha(0.08)`. The simulation cluster forces pull nodes toward positions biased toward the lower half of the viewport (lyric cluster at 80% height, irish at 70% height). `fitVisibleField` computed the camera for pre-drift node positions, but nodes continued drifting for ~3 seconds post-refit. Result: visible lower-left bias in all desktop Field refit screenshots.
+- Fix: in `returnToField()` desktop path, replaced `measureGraph()` with an inline dimension measurement (`width`, `height`, `viewBox`, center force) that does NOT restart the simulation. The sim remains at its settled (low-alpha) state, so nodes stay stable when `fitVisibleField` computes the camera transform.
+- Mobile path unchanged (`setReaderOpen` with measure).
+
+Files changed:
+- `index.html` — `returnToField()` desktop path: inline measure instead of `measureGraph()`
+- `qa/desktop-composition-polish/` — 3 new composition screenshots
+
+Commands run:
+- `npm test` — 5/5 passed
+
+Desktop composition measurements (1440×900 viewport):
+- Refit 1: dx=+7.1% (±12% limit), dy=+7.4% (±14% limit) — PASS
+- Refit 2: dx=-7.6% (±12% limit), dy=+12.2% (±14% limit) — PASS
+- Refit 3: dx=+3.5% (±12% limit), dy=+0.4% (±14% limit) — PASS
+
+Known risks:
+- Refit 2 dy is at 87% of the ±14% limit; some node layouts may push closer to the boundary.
+- If the user resizes the window between focus and field, `returnToField` will not restart the sim to adapt to new dimensions (the resize event listener handles this separately, which is correct).
+- Mobile behavior unchanged; existing risks remain (real-device QA, aperture tuning, Google Fonts CDN).
+
 ---
 
 ## 2026-06-22 — Deployment hardening: local D3

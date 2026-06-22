@@ -790,7 +790,7 @@ async function returnToField(opts={}){
   closeAllDrawers(); closeSheet(); hidePreview();
   updatePhaseClass();
   if(isMobile()) await setReaderOpen(true,{measure:true});
-  else {await nextFrame(); measureGraph();}
+  else {await nextFrame(); width=mapWrap.clientWidth; height=mapWrap.clientHeight; if(width>10&&height>10){svg.attr('viewBox',`0 0 ${width} ${height}`);sim.force('center',d3.forceCenter(width/2,height/2));}}
   clearLocalAperture();
   transitionToFieldLighting({duration:opts.duration??520});
   await nextFrame();
