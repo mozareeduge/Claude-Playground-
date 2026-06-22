@@ -50,6 +50,48 @@ Files expected:
 - `TESTING_REPORT.md`
 - `BLACK_BIRD_DECISIONS_CHANGELOG.md`
 
+## 2026-06-22 — Deployment hardening: local D3
+
+Base file:
+- `the_black_bird_v5_6_nightly.html`
+
+Goal:
+- Remove CDN dependency on cdnjs.cloudflare.com for D3.
+- Add Playwright smoke test harness with CDN guard.
+
+Files changed:
+- `the_black_bird_v5_6_nightly.html` — replaced remote D3 CDN `<script>` with `<script src="vendor/d3.v7.9.0.min.js"></script>`
+- `vendor/d3.v7.9.0.min.js` — D3 v7.9.0 minified, copied from `node_modules/d3/dist/d3.min.js`
+- `package.json` — added name, scripts, devDependency on `@playwright/test@^1.45.0`
+- `playwright.config.js` — new; configures Playwright for Chromium, `file://` base URL
+- `tests/black-bird-smoke.spec.js` — new; 5 smoke scenarios + CDN guard (`beforeEach` throws if D3 CDN is requested)
+- `README.md` — noted D3 is vendored locally
+- `docs/PROJECT_STATE.md` — new; stack/dependency table including local D3 note
+- `TESTING_REPORT.md` — updated with passing results; noted no CDN interception needed
+- `BLACK_BIRD_DECISIONS_CHANGELOG(1).md` — this entry
+
+Commands run:
+- `npm install d3@7.9.0 --prefix .`
+- `cp node_modules/d3/dist/d3.min.js vendor/d3.v7.9.0.min.js`
+- `npm install` (added `@playwright/test@^1.45.0`)
+- `npm test` — 5/5 passed (26.7s); no CDN requests detected
+
+Decisions:
+- Pin D3 version to what was in the CDN tag (7.8.5 → upgraded to 7.9.0 from npm; API compatible).
+- Test guard uses `page.on('request')` to detect and fail on any D3 CDN request.
+- No visual, design, ontology, or text changes made.
+
+Results:
+- All 5 smoke tests pass.
+- No request to cdnjs.cloudflare.com during test run.
+
+Known risks / next step:
+- Google Fonts is still loaded from CDN; acceptable for now (not load-critical for app function).
+- D3 version bumped from 7.8.5 (CDN) to 7.9.0 (npm); both are D3 v7 minor releases; no breaking changes expected.
+- Chromium symlink at `/opt/pw-browsers/chromium-1124` → `chromium-1194` required in this environment due to Playwright version mismatch; may need updating when Playwright is upgraded.
+
+---
+
 ## Changelog template
 
 Use this for future entries:
