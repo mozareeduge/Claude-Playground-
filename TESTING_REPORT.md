@@ -6,7 +6,7 @@
 - Browser: Chromium v1194 via Playwright v1.45.0
 - Desktop viewport: 1440 × 900
 - Mobile viewport: 400 × 650
-- Main HTML file: `the_black_bird_v5_6_nightly.html`
+- Main HTML file: `index.html`
 - D3: vendored locally at `vendor/d3.v7.9.0.min.js` — no CDN interception needed
 - Commands run: `npm install && npm test`
 

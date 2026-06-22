@@ -50,6 +50,38 @@ Files expected:
 - `TESTING_REPORT.md`
 - `BLACK_BIRD_DECISIONS_CHANGELOG.md`
 
+## 2026-06-22 — Canonical artifact and changelog cleanup
+
+Base file:
+- `index.html` (promoted from `the_black_bird_v5_6_nightly.html`)
+
+Goal:
+- Establish `index.html` as the single active root artifact.
+- Rename `BLACK_BIRD_DECISIONS_CHANGELOG(1).md` to canonical `BLACK_BIRD_DECISIONS_CHANGELOG.md`.
+- Update all references in tests, README, docs, and reports.
+
+Files changed:
+- `index.html` — new canonical root (copy of patched nightly with local D3)
+- `archive/old-builds/the_black_bird_v5_6_nightly.html` — nightly moved here for reference
+- `BLACK_BIRD_DECISIONS_CHANGELOG.md` — this file; renamed from `(1)` variant
+- `tests/black-bird-smoke.spec.js` — PAGE_URL updated to `index.html`
+- `README.md` — references updated to `index.html`
+- `docs/PROJECT_STATE.md` — main file updated to `index.html`; archive note added
+- `TESTING_REPORT.md` — main HTML file updated to `index.html`
+
+Commands run:
+- `npm test` — 5/5 passed
+
+Decisions:
+- `index.html` is now the canonical deployment artifact.
+- Old nightly filename retained in `archive/old-builds/` for reference only.
+- Changelog duplicate removed.
+
+Known risks / next step:
+- None introduced. Existing risks unchanged (mobile QA, aperture tuning, Google Fonts CDN).
+
+---
+
 ## 2026-06-22 — Deployment hardening: local D3
 
 Base file:

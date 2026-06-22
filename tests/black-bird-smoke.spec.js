@@ -2,7 +2,7 @@
 const { test, expect } = require('@playwright/test');
 const path = require('path');
 
-const PAGE_URL = 'file://' + path.resolve(__dirname, '..', 'the_black_bird_v5_6_nightly.html');
+const PAGE_URL = 'file://' + path.resolve(__dirname, '..', 'index.html');
 
 // Guard: fail if any request hits the D3 CDN
 test.beforeEach(async ({ page }) => {
