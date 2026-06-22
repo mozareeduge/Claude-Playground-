@@ -5,7 +5,7 @@
 - **Date/time:** 2026-06-22
 - **Browser:** Chromium (portable: uses `/opt/pw-browsers/chromium-1194/chrome-linux/chrome` if present, otherwise Playwright default)
 - **Viewports:** Desktop 1440 × 900, Mobile 400 × 650
-- **Main HTML file:** `the_black_bird_v5_6_nightly.html`
+- **Main HTML file:** `index.html` (renamed from `the_black_bird_v5_6_nightly.html`)
 - **Commands run:**
   - `npm install`
   - `PLAYWRIGHT_BROWSERS_PATH=/opt/pw-browsers npx playwright test`
@@ -132,3 +132,4 @@ All screenshots in `qa/smoke-2026-06-22/`:
 | Round 1 (harness) | 2026-06-21 | 4 PASS, 1 REVIEW | S1 L=2px; NaN errors filtered |
 | Round 2 (fixes) | 2026-06-22 | 5 PASS | S1 L=401px; NaN guards; route dedup |
 | Round 3 (hygiene) | 2026-06-22 | 6 PASS | NaN suppression removed (no errors); post-freeze stability confirmed; S6 added |
+| Round 4 (normalize) | 2026-06-22 | 6 PASS | Artifact renamed to `index.html`; docs/ created; test path updated |

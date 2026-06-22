@@ -4,15 +4,15 @@ A single-file D3/SVG speculative research poem interface that stages encounters 
 
 ## Current artifact
 
-`the_black_bird_v5_6_nightly.html`
+`index.html`
 
 ## Open locally
 
 ```
-open the_black_bird_v5_6_nightly.html
+open index.html
 # or
 python3 -m http.server 8080
-# then visit http://localhost:8080/the_black_bird_v5_6_nightly.html
+# then visit http://localhost:8080/
 ```
 
 ## Run tests

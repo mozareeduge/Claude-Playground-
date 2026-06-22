@@ -158,3 +158,36 @@ Known risks / next step:
 **Known risks / next step:**
 - Post-freeze stability result depends on sim alpha decay rate, which varies with rAF timing. Confirmed passing in headless Chromium on this machine.
 - Real-device QA still recommended for mobile surfaces.
+
+---
+
+## Round 4 — repo normalization — 2026-06-22
+
+**Base file:** `the_black_bird_v5_6_nightly.html` → renamed to `index.html`
+
+**Decision:** Normalize repo for final phases. Rename main artifact to `index.html`. Create `docs/` with project state, QA checklist, and prompt templates. No visual, behavioral, or data changes.
+
+**Changed files:**
+- `index.html` — copied from `the_black_bird_v5_6_nightly.html`; content unchanged
+- `the_black_bird_v5_6_nightly.html` — retained (not deleted); `index.html` is now canonical
+- `tests/black-bird-smoke.spec.js` — updated `HTML_FILE` path from `the_black_bird_v5_6_nightly.html` to `index.html`
+- `README.md` — updated artifact reference from `the_black_bird_v5_6_nightly.html` to `index.html`
+- `docs/PROJECT_STATE.md` — created; current build, what works, known risks, next phase
+- `docs/QA_CHECKLIST.md` — created; concise manual/automated checklist for all interaction states
+- `docs/PROMPT_TEMPLATES.md` — created; six short prompt templates for common Claude Code rounds
+
+**Commands run:**
+- `npm install` → up to date, 0 vulnerabilities
+- `PLAYWRIGHT_BROWSERS_PATH=/opt/pw-browsers npx playwright test` → 6 passed (1.5 min)
+
+**Test results:**
+- S1 Desktop onboarding: PASS — L=401 T=710 R=369 B=552 (initial); L=357 T=711 R=414 B=551 (post-freeze)
+- S2 Desktop Field refit: PASS — 44/44 nodes (100%) on all 3 rounds
+- S3 Dense aperture: PASS — 33 separated nodes; `usable and visually calm`
+- S4 Mobile Field: PASS — graph 594 px; reader hidden; nav visible
+- S5 Mobile Read: PASS — reader 544 px; scrollable; graph hidden
+- S6 Route duplicate: PASS — no consecutive Black Bird entries
+
+**Known risks / next step:**
+- `the_black_bird_v5_6_nightly.html` retained alongside `index.html` to avoid breaking any external references. May be removed in a later cleanup round.
+- Real-device QA still recommended for mobile surfaces.

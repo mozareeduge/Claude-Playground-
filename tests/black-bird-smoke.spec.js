@@ -2,7 +2,7 @@ const { test, expect } = require('@playwright/test');
 const path = require('path');
 const fs = require('fs');
 
-const HTML_FILE = `file://${path.resolve(__dirname, '../the_black_bird_v5_6_nightly.html')}`;
+const HTML_FILE = `file://${path.resolve(__dirname, '../index.html')}`;
 const SCREENSHOT_DIR = path.resolve(__dirname, '../qa/smoke-2026-06-22');
 const D3_LOCAL = path.resolve(__dirname, '../node_modules/d3/dist/d3.min.js');
 const D3_CDN_PATTERN = '**/d3/**d3.min.js';
