@@ -39,6 +39,10 @@ Repo verified ready for GitHub Pages publication from branch root:
 
 Expected live URL once Pages is enabled: `https://mozareeduge.github.io/Claude-Playground-/`
 
+**Status (2026-06-22):** GitHub Pages returns 403 `host_not_allowed` — Pages not yet activated in repo settings.
+
+**Fix pushed:** `.github/workflows/deploy-pages.yml` deploys from repo root on push to `main`. Owner must enable Pages via Settings → Pages → Source: GitHub Actions before the workflow can publish. Once enabled, re-run `npm run test:public` to verify.
+
 ## Desktop composition polish (2026-06-22)
 
 Desktop Field refit lower-left bias fixed. Root cause: `returnToField()` restarted the force simulation, causing node drift. Fix: measure-only path in desktop `returnToField()`. All 5 smoke tests pass. Composition measurements within ±12%/±14% center thresholds. Screenshots in `qa/desktop-composition-polish/`.

@@ -9,9 +9,21 @@ module.exports = defineConfig({
   projects: [
     {
       name: 'chromium',
+      testIgnore: '**/black-bird-public-smoke.spec.js',
       use: {
         ...devices['Desktop Chrome'],
         executablePath: '/opt/pw-browsers/chromium-1194/chrome-linux/chrome',
+      },
+    },
+    {
+      name: 'chromium-public',
+      testMatch: '**/black-bird-public-smoke.spec.js',
+      use: {
+        ...devices['Desktop Chrome'],
+        executablePath: '/opt/pw-browsers/chromium-1194/chrome-linux/chrome',
+        launchOptions: {
+          args: ['--ignore-certificate-errors'],
+        },
       },
     },
   ],

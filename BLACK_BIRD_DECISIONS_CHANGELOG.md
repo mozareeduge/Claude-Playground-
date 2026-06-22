@@ -201,6 +201,43 @@ Known risks / next step:
 - D3 version bumped from 7.8.5 (CDN) to 7.9.0 (npm); both are D3 v7 minor releases; no breaking changes expected.
 - Chromium symlink at `/opt/pw-browsers/chromium-1124` → `chromium-1194` required in this environment due to Playwright version mismatch; may need updating when Playwright is upgraded.
 
+## 2026-06-22 — Public GitHub Pages smoke check
+
+Base file: `index.html`
+
+Decision:
+- Ran public URL smoke tests against `https://mozareeduge.github.io/Claude-Playground-/`.
+- Discovered GitHub Pages returns HTTP 403 `host_not_allowed` — Pages was never activated in repo settings.
+- Created GitHub Actions deployment workflow so the site can be published from the repo root on push to `main`.
+- Created separate public smoke test spec (`tests/black-bird-public-smoke.spec.js`) with 8 checks, configurable via `PAGE_URL` env var. Added `npm run test:public` script.
+- Updated `playwright.config.js`: added `chromium-public` project (scoped to public spec, uses `--ignore-certificate-errors` to work in sandbox environment); `chromium` project now ignores public spec via `testIgnore`.
+
+Files changed:
+- `.github/workflows/deploy-pages.yml` — new; Pages deployment workflow on push to `main`
+- `tests/black-bird-public-smoke.spec.js` — new; 8-test public URL smoke suite
+- `package.json` — added `test:public` script; `test` script scoped to local spec
+- `playwright.config.js` — added `chromium-public` project; added `testIgnore` to `chromium` project
+- `TESTING_REPORT.md` — added public smoke check section with 403 root cause and action required
+- `docs/PROJECT_STATE.md` — noted 403 status and fix pushed
+- `BLACK_BIRD_DECISIONS_CHANGELOG.md` — this entry
+
+Commands run:
+- `npm test` — 5/5 passed (local)
+- `npm run test:public` — 3/8 passed (2 no-error checks passed; blocked by 403 on all content checks)
+
+Results:
+- Local smoke: 5/5 PASS.
+- Public smoke: BLOCKED. Server returns 403 `host_not_allowed` — GitHub Pages not enabled. No content rendered; threshold/nodes/refit/mobile assertions could not execute.
+- CDN guard: PASS (no D3 CDN request detected even on error page).
+
+Action required:
+- Repo owner must enable GitHub Pages in Settings → Pages → Source: GitHub Actions.
+- After the deploy workflow runs on the next push to `main`, re-run `npm run test:public`.
+
+Known risks:
+- Until Pages is enabled, public URL tests will remain blocked.
+- `chromium-public` project also runs the spec under the base `chromium` project if `testIgnore` is misconfigured; confirmed working.
+
 ---
 
 ## Changelog template

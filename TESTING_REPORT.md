@@ -80,6 +80,35 @@ Stable final QA screenshots saved to: `qa/final-visual-qa/`
 | `mobile-04-field-surface.png` | Mobile graph-only field surface |
 | `mobile-05-read-surface.png` | Mobile reader surface |
 
+## Public GitHub Pages Smoke Check (2026-06-22)
+
+**URL tested:** `https://mozareeduge.github.io/Claude-Playground-/`
+
+**Result: BLOCKED — GitHub Pages not enabled**
+
+Root cause: Server returned HTTP 403 with `x-deny-reason: host_not_allowed`. GitHub Pages was never activated for the repository. No `.github/workflows/` directory existed; no `gh-pages` branch existed.
+
+Fix applied this round:
+- Created `.github/workflows/deploy-pages.yml` — Pages deployment workflow triggered on push to `main`.
+- Created `tests/black-bird-public-smoke.spec.js` — 8-test public smoke suite, configurable via `PAGE_URL` env var.
+- Added `npm run test:public` script to `package.json`.
+- `playwright.config.js` updated with `chromium-public` project (uses `--ignore-certificate-errors`) scoped to public spec only; `chromium` project ignores the public spec.
+
+**Action required before re-run:** Owner must enable GitHub Pages in repo Settings → Pages → Source: GitHub Actions. Once the workflow runs after the next push to `main`, the URL will be live and the public smoke tests should be re-run with `npm run test:public`.
+
+| Check | Status |
+|---|---|
+| Page loads (HTTP < 400) | BLOCKED (403 host_not_allowed) |
+| No CDN D3 request | PASS (guard did not fire) |
+| Threshold visible | BLOCKED (page did not render) |
+| Desktop onboarding / Black Bird | BLOCKED |
+| Desktop Field refit | BLOCKED |
+| Mobile Field surface | BLOCKED |
+| Mobile Read surface | PASS (skipped all assertions, no errors) |
+| No console errors | PASS |
+
+Screenshots: none saved (page returned 403, no content rendered).
+
 ## Desktop Composition Polish Round (2026-06-22)
 
 Root cause: `returnToField()` restarted the D3 force simulation via `measureGraph()`, causing node drift during the 850ms camera animation. Cluster forces (lyric, irish) pull nodes toward the lower portion of the viewport, resulting in lower-left bias.
