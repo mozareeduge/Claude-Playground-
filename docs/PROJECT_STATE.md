@@ -2,7 +2,7 @@
 
 ## Current build
 
-- **Artifact:** `index.html` (renamed from `the_black_bird_v5_6_nightly.html`)
+- **Artifact:** `index.html` — the only active root HTML artifact; old build moved to `archive/old-builds/`
 - **Version:** v5.6-nightly
 - **Stack:** Single-file HTML — D3 v7.9 (CDN with local fallback), vanilla JS, inline CSS
 

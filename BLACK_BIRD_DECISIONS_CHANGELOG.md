@@ -2,6 +2,21 @@
 
 This file is the canonical project log. Keep it in the repository root. Update it after every Claude Code round.
 
+---
+
+## 2026-06-22 — Root artifact cleanup
+
+**Base file:** `index.html`
+**Decision:** Move `the_black_bird_v5_6_nightly.html` out of repo root to `archive/old-builds/` to eliminate root ambiguity before final visual QA.
+**Changed files:**
+- `the_black_bird_v5_6_nightly.html` → `archive/old-builds/the_black_bird_v5_6_nightly.html` (moved)
+- `docs/PROJECT_STATE.md` — updated artifact note; removed mention of rename origin
+- `BLACK_BIRD_DECISIONS_CHANGELOG.md` — this entry
+**Commands run:** `npm test`
+**Known risks:** None. Tests contain no references to the old file. `index.html` is the sole active root HTML artifact.
+
+---
+
 ## Current direction
 
 The Black Bird is being stabilized as a single-file HTML artifact before any full repo migration. The next architecture may use Vite/TypeScript/D3 modules, but not until the experience is stable.
