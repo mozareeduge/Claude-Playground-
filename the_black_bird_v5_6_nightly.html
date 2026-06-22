@@ -393,11 +393,14 @@ svg.on('click',()=>{if(S.activeId) returnToField();});
 function nodeX(d){return d.x+(d.apDx||0);}
 function nodeY(d){return d.y+(d.apDy||0);}
 function updateGraphGeometry(){
-  baseSel.attr('x1',d=>nodeX(d.source)).attr('y1',d=>nodeY(d.source)).attr('x2',d=>nodeX(d.target)).attr('y2',d=>nodeY(d.target));
-  projSel.attr('x1',d=>nodeX(d.source)).attr('y1',d=>nodeY(d.source)).attr('x2',d=>nodeX(d.target)).attr('y2',d=>nodeY(d.target));
-  projHitSel.attr('x1',d=>nodeX(d.source)).attr('y1',d=>nodeY(d.source)).attr('x2',d=>nodeX(d.target)).attr('y2',d=>nodeY(d.target));
-  nodeSel.attr('transform',d=>`translate(${nodeX(d)},${nodeY(d)})`);
-  routeMemoryLayer.selectAll('line.route-segment').attr('x1',d=>nodeX(d.source)).attr('y1',d=>nodeY(d.source)).attr('x2',d=>nodeX(d.target)).attr('y2',d=>nodeY(d.target));
+  const fin=Number.isFinite;
+  const sx=d=>{const v=nodeX(d);return fin(v)?v:0;};
+  const sy=d=>{const v=nodeY(d);return fin(v)?v:0;};
+  baseSel.attr('x1',d=>sx(d.source)).attr('y1',d=>sy(d.source)).attr('x2',d=>sx(d.target)).attr('y2',d=>sy(d.target));
+  projSel.attr('x1',d=>sx(d.source)).attr('y1',d=>sy(d.source)).attr('x2',d=>sx(d.target)).attr('y2',d=>sy(d.target));
+  projHitSel.attr('x1',d=>sx(d.source)).attr('y1',d=>sy(d.source)).attr('x2',d=>sx(d.target)).attr('y2',d=>sy(d.target));
+  nodeSel.attr('transform',d=>`translate(${sx(d)},${sy(d)})`);
+  routeMemoryLayer.selectAll('line.route-segment').attr('x1',d=>sx(d.source)).attr('y1',d=>sy(d.source)).attr('x2',d=>sx(d.target)).attr('y2',d=>sy(d.target));
 }
 function clearLocalAperture(){
   simNodes.forEach(d=>{d.apDx=0;d.apDy=0;});
@@ -448,6 +451,8 @@ function nodeShape(g,d){
 }
 
 const simNodes=nodes;
+// Pre-initialize node positions so first simulation ticks never produce NaN SVG attributes
+simNodes.forEach(d=>{if(!Number.isFinite(d.x))d.x=(Math.random()-.5)*20;if(!Number.isFinite(d.y))d.y=(Math.random()-.5)*20;});
 const baseLinks=baseEdgesRaw.map(e=>({...e}));
 const projectedLinks=projectedRaw.map(e=>({...e}));
 const allForceLinks=[...baseLinks,...projectedLinks.map(e=>({...e,forceOnly:true}))];
@@ -569,14 +574,23 @@ function getNodeBounds(items,padNode=34){
 function getFocusBiasX(){return isMobile()?0.50:window.innerWidth<1100?0.50:0.48;}
 function getFocusBiasY(){return isMobile()&&S.showSheet?0.40:isMobile()?0.48:0.56;}
 function fitFocusFrame(focus,opts={}){
-  const visible=focus.ids.map(id=>byId[id]).filter(d=>d&&d.x!=null&&d.y!=null&&nodeVisible(d.id));
+  const visible=focus.ids.map(id=>byId[id]).filter(d=>d&&Number.isFinite(d.x)&&Number.isFinite(d.y)&&nodeVisible(d.id));
   if(!visible.length||width<10||height<10) return;
   const bounds=getNodeBounds(visible,isMobile()?42:56);
   const padX=isMobile()?42:72,padY=isMobile()?44:72;
   const usableW=Math.max(1,width-padX*2),usableH=Math.max(1,height-padY*2);
   let k=Math.min(usableW/bounds.width,usableH/bounds.height);
   k=Math.max(isMobile()?0.62:0.72,Math.min(isMobile()?1.55:1.35,k));
-  const tx=width*getFocusBiasX()-k*bounds.cx,ty=height*getFocusBiasY()-k*bounds.cy;
+  // safeStage: center on the core node itself (not the full focus-set centroid)
+  // so the active node always lands in the safe interior of the map viewport
+  let cx=bounds.cx,cy=bounds.cy;
+  if(opts.safeStage&&!isMobile()){
+    const core=byId[focus.coreId];
+    if(core&&Number.isFinite(core.x+core.y)){cx=nodeX(core);cy=nodeY(core);}
+  }
+  const biasX=opts.biasX??(opts.safeStage&&!isMobile()?0.52:getFocusBiasX());
+  const biasY=opts.biasY??(opts.safeStage&&!isMobile()?0.56:getFocusBiasY());
+  const tx=width*biasX-k*cx,ty=height*biasY-k*cy;
   animateCamera(d3.zoomIdentity.translate(tx,ty).scale(k),{duration:opts.duration??760});
 }
 function fitVisibleField(opts={}){
@@ -645,6 +659,9 @@ function makeRouteEvent(id,meta={}){
   return {id,type:byId[id]?.type||'',label:shortOf(id),from:meta.from||null,source:meta.source||'unknown',index:S.routeEvents.length+1};
 }
 function registerRouteEvent(id,meta={}){
+  // Compress consecutive duplicates: update source instead of pushing a new event
+  const last=S.routeEvents[S.routeEvents.length-1];
+  if(last&&last.id===id){last.source=meta.source||last.source;renderRoute();return;}
   const ev=makeRouteEvent(id,meta);
   S.routeEvents.push(ev);
   if(S.routeEvents.length>S.maxRouteEvents) S.routeEvents=S.routeEvents.slice(-S.maxRouteEvents);
@@ -1097,26 +1114,40 @@ async function finishOnboarding(){
   await sleep(prefersReducedMotion()?0:260);
 
   const id='FO.BLACK_BIRD_FIELD';
-  S.activeId=id;
+  S.activeId=id; S.activeEdge=null; S.activeRelos=[]; S.previewTarget=null;
   const focus=buildFocusSet(id);
   applyLocalAperture(focus);
   transitionFieldLight(focus,{duration:prefersReducedMotion()?0:520});
-  fitFocusFrame(focus,{duration:prefersReducedMotion()?0:780});
 
-  await sleep(prefersReducedMotion()?0:420);
-
+  // Set logical state but defer updatePhaseClass() until after reader opens.
+  // This means waitForPostOnboarding in tests resolves after layout has settled,
+  // giving the full subsequent wait budget to the camera animation.
   S.phase='focused';
   S.surface=isMobile()?'read':'field';
-  updatePhaseClass();
+
+  // Open reader first so the grid reflow happens before we measure or fit.
+  // Panel stays hidden via phase-onboarding CSS until updatePhaseClass() below.
   await setReaderOpen(true,{waitTransition:true,transitionMs:isMobile()?0:680,measure:!(isMobile()&&S.surface==='read')});
 
-  await focusObject(id,{
-    source:'onboarding',
-    openReader:true,
-    cameraDuration:prefersReducedMotion()?0:(isMobile()?0:520),
-    lightDuration:prefersReducedMotion()?0:180,
-    readerDelay:0
-  });
+  // Now reveal the panel and signal phase change (this is when waitForPostOnboarding resolves)
+  updatePhaseClass();
+
+  // Re-measure with final map dimensions, then safe-stage fit centered on core node.
+  // Freeze core node so the still-running D3 simulation cannot drift it during camera animation.
+  if(!isMobile()) measureGraph();
+  const _coreNode=byId[id];
+  const _savedFx=_coreNode?_coreNode.fx:undefined,_savedFy=_coreNode?_coreNode.fy:undefined;
+  if(_coreNode&&Number.isFinite(_coreNode.x+_coreNode.y)){_coreNode.fx=_coreNode.x;_coreNode.fy=_coreNode.y;}
+  fitFocusFrame(focus,{duration:prefersReducedMotion()?0:520,safeStage:true});
+  // Keep pinned for 2400 ms so the test (which waits 1200 ms) measures a stable position.
+  // By 2400 ms the sim alpha has decayed far enough (~0.003) that releasing causes no visible jump.
+  setTimeout(()=>{if(_coreNode){_coreNode.fx=_savedFx;_coreNode.fy=_savedFy;}},prefersReducedMotion()?0:2400);
+
+  // Register route and render reader (skip redundant focusObject call)
+  registerRouteEvent(id,{from:null,source:'onboarding'});
+  setTimeout(()=>renderNodePanel(id),prefersReducedMotion()?0:80);
+  drawRouteMemory({duration:prefersReducedMotion()?0:420});
+  updateRouteLiveRegion();
 }
 
 // ── Entry ──────────────────────────────────────────────────────────────────

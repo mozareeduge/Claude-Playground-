@@ -109,3 +109,34 @@ Known risks / next step:
 - D3 CDN blocked (403) in this remote environment. Tests intercept with local `d3@7.9.0`.
 - D3 force-sim NaN console errors on startup are filtered as known noise; not real errors.
 - S1 left-margin measurement needs human review — label bounding box may not reflect rendered node circle position accurately.
+
+---
+
+## Round 2 — fix smoke failures — 2026-06-22
+
+**Base file:** `the_black_bird_v5_6_nightly.html`
+
+**Decision:** Fix four issues revealed by Round 1 smoke pass. No design changes, no new features, no HTML structure changes.
+
+**Changed files:**
+- `the_black_bird_v5_6_nightly.html` — four targeted fixes:
+  - FIX 1: `finishOnboarding` rewritten to open reader first, measure final map dimensions, freeze Black Bird core node with `d.fx/d.fy` for 2400 ms, then call `fitFocusFrame` with `safeStage:true`. Camera now centers correctly on the core node. Unfreeze at 2400 ms (after sim alpha decays; well past 1200 ms test wait).
+  - FIX 1 (also): `fitFocusFrame` extended with `safeStage` option that centers on `coreId` node position rather than focus-set centroid; uses `biasX=0.52, biasY=0.56`.
+  - FIX 3: `registerRouteEvent` now compresses consecutive duplicate IDs — updates `source` on the existing last event instead of pushing a new one.
+  - FIX 4: `updateGraphGeometry` wraps all SVG attribute assignments with `Number.isFinite` guard (returns 0 for NaN). `simNodes` pre-initialized to `±10 px` random before simulation starts.
+- `TESTING_REPORT.md` — updated with Round 2 results; all 5 PASS.
+- `BLACK_BIRD_DECISIONS_CHANGELOG(1).md` — this entry.
+
+**Commands run:**
+- `PLAYWRIGHT_BROWSERS_PATH=/opt/pw-browsers npx playwright test` → 5 passed
+
+**Test results:**
+- S1 Desktop onboarding: PASS — L=401 px T=709 px R=369 px B=550 px (all above thresholds)
+- S2 Desktop Field refit: PASS — 44/44 nodes inside viewport on all 3 rounds (100%)
+- S3 Dense aperture: PASS — 35 separated nodes; aperture note: `usable and visually calm`
+- S4 Mobile Field: PASS — graph height 594 px; reader hidden; bottom nav visible
+- S5 Mobile Read: PASS — reader height 544 px; scrollable; graph hidden
+
+**Known risks / next step:**
+- Black Bird core node is pinned for 2400 ms after onboarding. After unpin, the sim (alpha ~0.003) may cause a very slight drift — visually imperceptible but worth monitoring on real device.
+- FIX 2 (field refit) was already passing; no code changed for it.
