@@ -111,6 +111,28 @@ Decisions:
 Known risks / next step:
 - None introduced. Existing risks unchanged (mobile QA, aperture tuning, Google Fonts CDN).
 
+## 2026-06-22 — GitHub Pages deployment readiness
+
+Base file: `index.html`
+
+Decision:
+- Verified repo is ready to publish from GitHub Pages branch root. No changes to `index.html`.
+- `.gitignore` confirmed safe: only `node_modules/` and `playwright-report/` are ignored.
+- `vendor/d3.v7.9.0.min.js` loads via relative path — resolves correctly under the Pages subdirectory URL (`/Claude-Playground-/vendor/...`).
+- `README.md` updated with Deployment section (GitHub Pages UI steps, expected URL) and Custom Domain Later section (Cloudflare Registrar + DNS recommendation).
+- No `CNAME` file added; no DNS records configured yet. Custom domain deferred until a domain is chosen.
+
+Files changed:
+- `README.md` — added Deployment and Custom Domain Later sections
+- `docs/PROJECT_STATE.md` — added deployment readiness note
+
+Commands run:
+- `npm test` — 5/5 passed
+
+Known risks:
+- Repository name `Claude-Playground-` contains a trailing hyphen; GitHub Pages URL will include it verbatim: `https://mozareeduge.github.io/Claude-Playground-/`. Verify this resolves correctly after enabling Pages.
+- If the branch is not merged to `main` before Pages is enabled, the user must select the working branch (`claude/inspiring-euler-2fakpj`) as the source branch in Pages settings.
+
 ## 2026-06-22 — Desktop Field refit composition fix
 
 Base file: `index.html`

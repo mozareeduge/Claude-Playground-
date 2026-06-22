@@ -29,6 +29,16 @@ Smoke tests: 5/5 PASS. Screenshots in `qa/final-visual-qa/`.
 
 Mobile Field surface locator bug was fixed in test 4: the bottom-nav `[data-mobile="field"]` button is now used instead of the hidden `#fieldBtn` inside `.map-wrap`.
 
+## GitHub Pages deployment readiness (2026-06-22)
+
+Repo verified ready for GitHub Pages publication from branch root:
+- `index.html` at root; `vendor/d3.v7.9.0.min.js` present and referenced by relative path.
+- `.gitignore` does not suppress `index.html`, `vendor/`, `docs/`, `qa/`, or `package-lock.json`.
+- `README.md` updated with Pages enable steps, expected URL, and custom domain plan.
+- No build step required; serve from root.
+
+Expected live URL once Pages is enabled: `https://mozareeduge.github.io/Claude-Playground-/`
+
 ## Desktop composition polish (2026-06-22)
 
 Desktop Field refit lower-left bias fixed. Root cause: `returnToField()` restarted the force simulation, causing node drift. Fix: measure-only path in desktop `returnToField()`. All 5 smoke tests pass. Composition measurements within ±12%/±14% center thresholds. Screenshots in `qa/desktop-composition-polish/`.
