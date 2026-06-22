@@ -1,5 +1,12 @@
-const { defineConfig, devices } = require('@playwright/test');
-const path = require('path');
+const { defineConfig } = require('@playwright/test');
+const fs = require('fs');
+
+const CHROMIUM_PATH = '/opt/pw-browsers/chromium-1194/chrome-linux/chrome';
+const useCustomChromium = fs.existsSync(CHROMIUM_PATH);
+
+const launchOptions = useCustomChromium
+  ? { executablePath: CHROMIUM_PATH, args: ['--ignore-certificate-errors'] }
+  : { args: ['--ignore-certificate-errors'] };
 
 module.exports = defineConfig({
   testDir: './tests',
@@ -18,10 +25,7 @@ module.exports = defineConfig({
       name: 'chromium',
       use: {
         browserName: 'chromium',
-        launchOptions: {
-          executablePath: '/opt/pw-browsers/chromium-1194/chrome-linux/chrome',
-          args: ['--ignore-certificate-errors'],
-        },
+        launchOptions,
       },
     },
   ],

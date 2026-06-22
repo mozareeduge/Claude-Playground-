@@ -37,22 +37,7 @@ Known risks:
 - Local aperture needs visual tuning around very dense neighborhoods.
 - Desktop Black Bird first focus should be checked on the laptop viewport.
 
-### Testing harness round — pending
-
-Planned decision:
-- Add Playwright smoke tests for desktop onboarding, Field refit, dense aperture evidence, mobile Field surface, and mobile Read surface.
-- No app behaviour changes in this round.
-
-Files expected:
-- `package.json`
-- `playwright.config.js`
-- `tests/black-bird-smoke.spec.js`
-- `TESTING_REPORT.md`
-- `BLACK_BIRD_DECISIONS_CHANGELOG.md`
-
 ## Changelog template
-
-Use this for future entries:
 
 ```md
 ## YYYY-MM-DD — Short round name
@@ -92,7 +77,6 @@ Known risks / next step:
 - `playwright.config.js` — created; Chromium-only, 90s global timeout, pre-installed binary path
 - `tests/black-bird-smoke.spec.js` — created; 5 scenarios: desktop onboarding, Field refit, dense aperture, mobile Field, mobile Read
 - `TESTING_REPORT.md` — populated with full results
-- `BLACK_BIRD_DECISIONS_CHANGELOG(1).md` — this entry
 
 **Commands run:**
 - `npm install`
@@ -125,7 +109,6 @@ Known risks / next step:
   - FIX 3: `registerRouteEvent` now compresses consecutive duplicate IDs — updates `source` on the existing last event instead of pushing a new one.
   - FIX 4: `updateGraphGeometry` wraps all SVG attribute assignments with `Number.isFinite` guard (returns 0 for NaN). `simNodes` pre-initialized to `±10 px` random before simulation starts.
 - `TESTING_REPORT.md` — updated with Round 2 results; all 5 PASS.
-- `BLACK_BIRD_DECISIONS_CHANGELOG(1).md` — this entry.
 
 **Commands run:**
 - `PLAYWRIGHT_BROWSERS_PATH=/opt/pw-browsers npx playwright test` → 5 passed
@@ -140,3 +123,38 @@ Known risks / next step:
 **Known risks / next step:**
 - Black Bird core node is pinned for 2400 ms after onboarding. After unpin, the sim (alpha ~0.003) may cause a very slight drift — visually imperceptible but worth monitoring on real device.
 - FIX 2 (field refit) was already passing; no code changed for it.
+
+---
+
+## Round 3 — repo hygiene and test hardening — 2026-06-22
+
+**Base file:** `the_black_bird_v5_6_nightly.html`
+
+**Decision:** Repo hygiene and test hardening only. No HTML artifact changes.
+
+**Changed files:**
+- `BLACK_BIRD_DECISIONS_CHANGELOG.md` — created as canonical log (merged from `BLACK_BIRD_DECISIONS_CHANGELOG(1).md`); duplicate removed
+- `README.md` — replaced placeholder with project info, artifact filename, open instructions, test commands
+- `playwright.config.js` — made portable: uses pre-installed Chromium only if path exists, otherwise falls back to Playwright default
+- `.gitignore` — added `test-results/` to keep generated screenshots out of git
+- `tests/black-bird-smoke.spec.js` — removed NaN SVG warning suppression; added S1 post-freeze stability check (3200 ms after initial pass; requires same safe margins); added S6 route duplicate assertion
+- `qa/smoke-2026-06-22/` — created; stable screenshot archive copied from test-results
+- `TESTING_REPORT.md` — updated screenshot paths to `qa/smoke-2026-06-22/`; updated with Round 3 results
+
+**Commands run:**
+- `npm install`
+- `PLAYWRIGHT_BROWSERS_PATH=/opt/pw-browsers npx playwright test` → 7 passed
+
+**Test results:**
+- S1 Desktop onboarding: PASS — margins confirmed; post-freeze stability PASS
+- S2 Desktop Field refit: PASS
+- S3 Dense aperture: PASS
+- S4 Mobile Field: PASS
+- S5 Mobile Read: PASS
+- S6 Route duplicate: PASS — no consecutive Black Bird in route
+
+**NaN warning status:** NaN suppression removed. No NaN console errors observed after removal (guarded by FIX 4 `Number.isFinite` in `updateGraphGeometry` and pre-initialized node positions).
+
+**Known risks / next step:**
+- Post-freeze stability result depends on sim alpha decay rate, which varies with rAF timing. Confirmed passing in headless Chromium on this machine.
+- Real-device QA still recommended for mobile surfaces.

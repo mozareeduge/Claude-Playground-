@@ -3,7 +3,7 @@ const path = require('path');
 const fs = require('fs');
 
 const HTML_FILE = `file://${path.resolve(__dirname, '../the_black_bird_v5_6_nightly.html')}`;
-const SCREENSHOT_DIR = path.resolve(__dirname, '../test-results/black-bird-smoke');
+const SCREENSHOT_DIR = path.resolve(__dirname, '../qa/smoke-2026-06-22');
 const D3_LOCAL = path.resolve(__dirname, '../node_modules/d3/dist/d3.min.js');
 const D3_CDN_PATTERN = '**/d3/**d3.min.js';
 
@@ -21,9 +21,8 @@ function screenshotPath(name) {
   return path.join(SCREENSHOT_DIR, name);
 }
 
-// Known transient D3 force-sim init noise — not real errors
+// Suppress only favicon 404s — not real errors
 const NOISE_PATTERNS = [
-  /attribute [xy][12]: Expected length.*NaN/i,
   /favicon/i,
 ];
 function isNoise(msg) { return NOISE_PATTERNS.some(p => p.test(msg)); }
@@ -63,10 +62,33 @@ async function waitForPostOnboarding(page, timeout = 20000) {
   );
 }
 
+// Measure Black Bird node margins within .map-wrap
+async function measureBlackBirdMargins(page) {
+  return page.evaluate(() => {
+    const mapWrap = document.querySelector('.map-wrap');
+    const mapBox = mapWrap?.getBoundingClientRect();
+    if (!mapBox) return null;
+    const labels = document.querySelectorAll('text.node-label');
+    for (const el of labels) {
+      if (/Black Bird/i.test(el.textContent)) {
+        const nb = el.getBoundingClientRect();
+        return {
+          L: nb.x - mapBox.x,
+          T: nb.y - mapBox.y,
+          R: (mapBox.x + mapBox.width) - (nb.x + nb.width),
+          B: (mapBox.y + mapBox.height) - (nb.y + nb.height),
+        };
+      }
+    }
+    return null;
+  });
+}
+
 // ──────────────────────────────────────────────────
 // SCENARIO 1 — Desktop onboarding to Black Bird
 // ──────────────────────────────────────────────────
 test('S1: Desktop onboarding to Black Bird', async ({ page }) => {
+  test.setTimeout(90000);
   await page.setViewportSize(DESKTOP);
   const errors = attachErrorListeners(page);
   await interceptD3(page);
@@ -93,39 +115,41 @@ test('S1: Desktop onboarding to Black Bird', async ({ page }) => {
   const mapBox = await page.locator('.map-wrap').boundingBox();
   expect(mapBox).not.toBeNull();
 
-  // Try to find active/focused Black Bird node by SVG text label
-  let nodeBox = null;
-  let nodeMeasurementNote = 'active node measurement unavailable';
+  // Measure Black Bird node margins (initial — node still pinned by fx/fy)
+  const margins = await measureBlackBirdMargins(page);
 
-  const nodeLabels = page.locator('text.node-label');
-  const count = await nodeLabels.count();
-  for (let i = 0; i < count; i++) {
-    const el = nodeLabels.nth(i);
-    const txt = await el.textContent().catch(() => '');
-    if (/Black Bird/i.test(txt)) {
-      nodeBox = await el.boundingBox().catch(() => null);
-      if (nodeBox) nodeMeasurementNote = 'active node bounding box measured via SVG text label';
-      break;
-    }
-  }
-
-  // Check margins only if we have a nodeBox
-  if (nodeBox && mapBox) {
-    const leftMargin = nodeBox.x - mapBox.x;
-    const topMargin = nodeBox.y - mapBox.y;
-    const rightMargin = (mapBox.x + mapBox.width) - (nodeBox.x + nodeBox.width);
-    const bottomMargin = (mapBox.y + mapBox.height) - (nodeBox.y + nodeBox.height);
-
-    // Store measurements for report (don't hard-fail on margins — subjective position)
-    const marginPass =
-      leftMargin >= 80 && topMargin >= 110 && rightMargin >= 40 && bottomMargin >= 40;
-
-    if (!marginPass) {
-      console.warn(`S1 margin check: L=${leftMargin.toFixed(0)} T=${topMargin.toFixed(0)} R=${rightMargin.toFixed(0)} B=${bottomMargin.toFixed(0)} — needs human review`);
-    }
+  if (margins) {
+    const marginPass = margins.L >= 80 && margins.T >= 110 && margins.R >= 40 && margins.B >= 40;
+    console.log(`S1 initial margins: L=${margins.L.toFixed(0)} T=${margins.T.toFixed(0)} R=${margins.R.toFixed(0)} B=${margins.B.toFixed(0)} — ${marginPass ? 'PASS' : 'FAIL'}`);
+    expect(margins.L, `S1 initial: left margin ${margins.L.toFixed(0)}px < 80px`).toBeGreaterThanOrEqual(80);
+    expect(margins.T, `S1 initial: top margin ${margins.T.toFixed(0)}px < 110px`).toBeGreaterThanOrEqual(110);
+    expect(margins.R, `S1 initial: right margin ${margins.R.toFixed(0)}px < 40px`).toBeGreaterThanOrEqual(40);
+    expect(margins.B, `S1 initial: bottom margin ${margins.B.toFixed(0)}px < 40px`).toBeGreaterThanOrEqual(40);
+  } else {
+    console.warn('S1: Black Bird node label not found for margin measurement');
   }
 
   await page.screenshot({ path: screenshotPath('desktop-01-after-onboarding.png'), fullPage: false });
+
+  // ── Post-freeze stability: wait 3200 ms more (fx/fy expires at 2400 ms from onboarding) ──
+  await page.waitForTimeout(3200);
+
+  const marginsPostFreeze = await measureBlackBirdMargins(page);
+
+  if (marginsPostFreeze) {
+    const pfPass =
+      marginsPostFreeze.L >= 80 && marginsPostFreeze.T >= 110 &&
+      marginsPostFreeze.R >= 40 && marginsPostFreeze.B >= 40;
+    console.log(`S1 post-freeze margins: L=${marginsPostFreeze.L.toFixed(0)} T=${marginsPostFreeze.T.toFixed(0)} R=${marginsPostFreeze.R.toFixed(0)} B=${marginsPostFreeze.B.toFixed(0)} — ${pfPass ? 'PASS' : 'FAIL'}`);
+    expect(marginsPostFreeze.L, `S1 post-freeze: left margin ${marginsPostFreeze.L.toFixed(0)}px < 80px`).toBeGreaterThanOrEqual(80);
+    expect(marginsPostFreeze.T, `S1 post-freeze: top margin ${marginsPostFreeze.T.toFixed(0)}px < 110px`).toBeGreaterThanOrEqual(110);
+    expect(marginsPostFreeze.R, `S1 post-freeze: right margin ${marginsPostFreeze.R.toFixed(0)}px < 40px`).toBeGreaterThanOrEqual(40);
+    expect(marginsPostFreeze.B, `S1 post-freeze: bottom margin ${marginsPostFreeze.B.toFixed(0)}px < 40px`).toBeGreaterThanOrEqual(40);
+  } else {
+    console.warn('S1 post-freeze: Black Bird node label not found');
+  }
+
+  await page.screenshot({ path: screenshotPath('desktop-01-after-onboarding-post-freeze.png'), fullPage: false });
 
   // Hard assertions
   expect(errors, `Errors: ${errors.join('\n')}`).toHaveLength(0);
@@ -133,15 +157,23 @@ test('S1: Desktop onboarding to Black Bird', async ({ page }) => {
   if (!blackBirdActive) {
     console.warn('S1: Black Bird label not found in route/reader — needs human review');
   }
-  // Store for report
-  test.info().annotations.push({
-    type: 'node-measurement',
-    description: nodeMeasurementNote,
-  });
+
   test.info().annotations.push({
     type: 'black-bird-active-in-route-reader',
     description: String(blackBirdActive),
   });
+  if (margins) {
+    test.info().annotations.push({
+      type: 'initial-margins',
+      description: `L=${margins.L.toFixed(0)} T=${margins.T.toFixed(0)} R=${margins.R.toFixed(0)} B=${margins.B.toFixed(0)}`,
+    });
+  }
+  if (marginsPostFreeze) {
+    test.info().annotations.push({
+      type: 'post-freeze-margins',
+      description: `L=${marginsPostFreeze.L.toFixed(0)} T=${marginsPostFreeze.T.toFixed(0)} R=${marginsPostFreeze.R.toFixed(0)} B=${marginsPostFreeze.B.toFixed(0)}`,
+    });
+  }
 });
 
 // ──────────────────────────────────────────────────
@@ -228,16 +260,14 @@ test('S2: Desktop Field refit from multiple focuses', async ({ page }) => {
     });
   }
 
-  // Store results
   test.info().annotations.push({
     type: 'field-refit-results',
     description: JSON.stringify(results),
   });
 
-  // Pass if at least 85% inside viewport on each round
   for (let i = 0; i < results.length; i++) {
     const { pct, total } = results[i];
-    if (total === 0) continue; // no nodes measurable — skip rather than fail
+    if (total === 0) continue;
     expect(pct, `Round ${i + 1}: only ${pct.toFixed(1)}% of nodes inside viewport`).toBeGreaterThanOrEqual(85);
   }
 
@@ -360,7 +390,6 @@ test('S4: Mobile Field surface', async ({ page }) => {
     const firstLinkBox = await firstLink.boundingBox().catch(() => null);
     if (firstLinkBox) await firstLink.click();
     else {
-      // try a node label
       const label = page.locator('text.node-label').first();
       const lb = await label.boundingBox().catch(() => null);
       if (lb) await page.mouse.click(lb.x + lb.width / 2, lb.y + lb.height / 2);
@@ -386,7 +415,6 @@ test('S4: Mobile Field surface', async ({ page }) => {
   test.info().annotations.push({ type: 's4-reader-height', description: readerBox ? readerBox.height.toFixed(0) : 'hidden' });
   test.info().annotations.push({ type: 's4-nav-visible', description: navBox ? 'yes' : 'no' });
 
-  // Graph should dominate: at least 50% of viewport height
   if (mapBox) {
     expect(mapBox.height).toBeGreaterThan(MOBILE.height * 0.4);
   }
@@ -424,13 +452,11 @@ test('S5: Mobile Read surface', async ({ page }) => {
   const readerBox = await page.locator('#reader').boundingBox().catch(() => null);
   const mapBox = await page.locator('.map-wrap').boundingBox().catch(() => null);
 
-  // Check scroll
   const readerScrollable = await page.evaluate(() => {
     const r = document.getElementById('reader');
     return r ? r.scrollHeight > r.clientHeight : false;
   });
 
-  // Check nav visibility
   const navBox = await page.locator('.bottom-nav').boundingBox().catch(() => null);
 
   console.log(`S5 reader height: ${readerBox?.height?.toFixed(0)}`);
@@ -441,10 +467,67 @@ test('S5: Mobile Read surface', async ({ page }) => {
   test.info().annotations.push({ type: 's5-scrollable', description: String(readerScrollable) });
   test.info().annotations.push({ type: 's5-map-secondary', description: mapBox ? `${mapBox.height.toFixed(0)}px` : 'hidden' });
 
-  // Reader should be visible and take meaningful height
   if (readerBox) {
     expect(readerBox.height).toBeGreaterThan(200);
   }
 
+  expect(errors).toHaveLength(0);
+});
+
+// ──────────────────────────────────────────────────
+// SCENARIO 6 — Route duplicate compression
+// ──────────────────────────────────────────────────
+test('S6: Route duplicate compression', async ({ page }) => {
+  await page.setViewportSize(DESKTOP);
+  const errors = attachErrorListeners(page);
+  await interceptD3(page);
+  await page.goto(HTML_FILE);
+  await enterField(page);
+  await waitForPostOnboarding(page);
+  await page.waitForTimeout(1200);
+
+  // After onboarding, Black Bird is already the active focus.
+  // Focus Black Bird a second time via a route item or fl link.
+  const focusedAgain = await page.evaluate(() => {
+    // Try clicking a route item that is Black Bird
+    const routeItems = Array.from(document.querySelectorAll('.route-item'));
+    const bbRoute = routeItems.find(el => /Black Bird/i.test(el.textContent));
+    if (bbRoute) { bbRoute.click(); return 'route-item'; }
+    // Try clicking a fl link in reader that references Black Bird
+    const flLinks = Array.from(document.querySelectorAll('#reader .fl'));
+    const bbLink = flLinks.find(el => /Black Bird/i.test(el.textContent));
+    if (bbLink) { bbLink.click(); return 'fl-link'; }
+    return null;
+  });
+
+  await page.waitForTimeout(800);
+  console.log(`S6: second focus attempted via: ${focusedAgain}`);
+
+  // Read visible route items
+  const routeItems = await page.locator('.route-item').allTextContents();
+  console.log(`S6 route items: ${JSON.stringify(routeItems)}`);
+
+  // Check no consecutive identical Black Bird entries
+  let consecutiveDuplicate = false;
+  for (let i = 1; i < routeItems.length; i++) {
+    const prev = routeItems[i - 1].trim();
+    const curr = routeItems[i].trim();
+    if (/Black Bird/i.test(prev) && /Black Bird/i.test(curr)) {
+      consecutiveDuplicate = true;
+      console.warn(`S6 FAIL: consecutive Black Bird route items at positions ${i - 1} and ${i}`);
+      break;
+    }
+  }
+
+  test.info().annotations.push({
+    type: 's6-route-items',
+    description: routeItems.join(' · '),
+  });
+  test.info().annotations.push({
+    type: 's6-consecutive-duplicate',
+    description: String(consecutiveDuplicate),
+  });
+
+  expect(consecutiveDuplicate, 'Route should not contain consecutive Black Bird entries').toBe(false);
   expect(errors).toHaveLength(0);
 });
