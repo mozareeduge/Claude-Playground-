@@ -18,7 +18,8 @@ All ordered IDs migrated to singular non-sequential content-hash IDs. No ordered
 | MNO.04 | MNO.WINDOW_DARKNESS__F488DD0A |
 | MNO.05 | MNO.BLACK_RING_FORENSIC__A84A665E |
 
-New objects: FO.ALLAH, RefO.SAYERS_HUGINN_MUNINN_CORPSE__C003F76E, RefO.NI_MHAOLDOMHNAIGH_SCALD_CROW__694164EE.
+New objects (ID singularity round): FO.ALLAH, RefO.SAYERS_HUGINN_MUNINN_CORPSE__C003F76E, RefO.NI_MHAOLDOMHNAIGH_SCALD_CROW__694164EE.
+New objects (2026-06-24 FO.GOD round): FO.GOD (central), RelO.R9C3F1A62 (Quranic mediation), RelO.RB6E74D1A (Norse mediation). 50 nodes total.
 
 Data validator: `npm run test:data` → PASS (47 nodes).
 

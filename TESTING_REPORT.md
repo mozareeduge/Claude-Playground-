@@ -1,5 +1,12 @@
 # Testing Report — Black Bird
 
+## Round: Add FO.GOD field object (2026-06-24)
+
+- `npm run test:data` → **PASS** — 50 nodes, 0 errors. FO.GOD present; RelO.R9C3F1A62 and RelO.RB6E74D1A present and contain FO.GOD; all existing checks preserved.
+- `npm test` (Playwright browser smoke) → **BLOCKED locally** — Chromium not installable in container. Deferred to GitHub Actions `playwright-smoke.yml`.
+
+---
+
 ## Round: ID Singularity + Approved RNO Copy (2026-06-24)
 
 - `npm run test:data` → **PASS** — 47 nodes, 0 errors. All ordered IDs migrated; FO.ALLAH and both new RefO objects present and connected; RelO labels opaque; RelO shortLabels rel·XXXX.
