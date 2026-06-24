@@ -3,7 +3,26 @@
 ## Current build
 
 - Main file: `index.html`
-- Phase: V5.6-nightly — governed interaction repair + deployment hardening
+- Phase: V5.6-nightly — ID singularity migration + approved RNO copy
+
+## Ontology ID status (2026-06-24)
+
+All ordered IDs migrated to singular non-sequential content-hash IDs. No ordered RNO/MNO/RefO/RelO IDs remain active.
+
+| Old ID | New ID |
+|---|---|
+| RNO.04.I | RNO.GHURAB_BURIAL__424A0ECF |
+| RNO.04.II | RNO.HUGINN_MUNINN_RETURN__E0CB0303 |
+| RNO.04.III | RNO.SCALD_CROW_SHOULDER__92F6BD37 |
+| RNO.05 | RNO.AMERICAN_CROWS_CORPSE__9FFB70D1 |
+| MNO.04 | MNO.WINDOW_DARKNESS__F488DD0A |
+| MNO.05 | MNO.BLACK_RING_FORENSIC__A84A665E |
+
+New objects: FO.ALLAH, RefO.SAYERS_HUGINN_MUNINN_CORPSE__C003F76E, RefO.NI_MHAOLDOMHNAIGH_SCALD_CROW__694164EE.
+
+Data validator: `npm run test:data` → PASS (47 nodes).
+
+Browser smoke: deferred to GitHub Actions (Chromium not installable in remote container).
 
 ## Stack
 
