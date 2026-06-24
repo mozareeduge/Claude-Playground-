@@ -112,6 +112,19 @@ if (!relR847 || !relR847.includes('FO.FORENSIC_PATHOLOGY')) fail('FO.FORENSIC_PA
 const relR2D2 = DATA.relations['RelO.R2D2CBF08'];
 if (!relR2D2 || !relR2D2.includes('FO.FORENSIC_PATHOLOGY')) fail('FO.FORENSIC_PATHOLOGY not in RelO.R2D2CBF08');
 
+// 15. FO.GOD exists
+if (!nodeIds.has('FO.GOD')) fail('FO.GOD is missing');
+
+// 16. RelO.R9C3F1A62 exists and contains FO.GOD
+if (!nodeIds.has('RelO.R9C3F1A62')) fail('RelO.R9C3F1A62 is missing');
+const rel9C3F = DATA.relations['RelO.R9C3F1A62'];
+if (!rel9C3F || !rel9C3F.includes('FO.GOD')) fail('FO.GOD is not in RelO.R9C3F1A62 participants');
+
+// 17. RelO.RB6E74D1A exists and contains FO.GOD
+if (!nodeIds.has('RelO.RB6E74D1A')) fail('RelO.RB6E74D1A is missing');
+const relB6E7 = DATA.relations['RelO.RB6E74D1A'];
+if (!relB6E7 || !relB6E7.includes('FO.GOD')) fail('FO.GOD is not in RelO.RB6E74D1A participants');
+
 // Report
 if (errors.length === 0) {
   console.log('PASS: all data integrity checks passed (' + nodeIds.size + ' nodes)');

@@ -2,6 +2,14 @@
 
 This file is the canonical project log. Keep it in the repository root. Update it after every Claude Code round.
 
+## Round: Add FO.GOD field object (2026-06-24)
+
+- **base file:** `index.html`
+- **decision:** Added `FO.GOD` as a central FO. Connected to Quranic mediation structure via `RelO.R9C3F1A62` (participants: FO.GOD, FO.ALLAH, FO.BLACK_BIRD_FIELD, NameO.AR.GHURAB, FO.CAIN, FO.CORPSE, FO.BURIAL) and to Norse structure via `RelO.RB6E74D1A` (participants: FO.GOD, FO.ODIN, FO.BLACK_BIRD_FIELD, NameO.ON.HRAFN, FO.HUGINN, FO.MUNINN, FO.BATTLEFIELD, FO.CORPSE). FO.GOD added to objects lists for RNO.GHURAB_BURIAL__424A0ECF and RNO.HUGINN_MUNINN_RETURN__E0CB0303. No RNO/MNO body prose altered. FO.ALLAH and FO.ODIN remain separate. No direct Allah–Odin RelO added.
+- **changed files:** `index.html`, `tests/black-bird-data-integrity.cjs`, `BLACK_BIRD_DECISIONS_CHANGELOG.md`, `docs/PROJECT_STATE.md`, `TESTING_REPORT.md`
+- **commands run:** `npm run test:data` → PASS (50 nodes); `npm test` → browser smoke deferred to GitHub Actions
+- **known risks:** None — additive only, no existing objects or relations modified.
+
 ## Round: Ontology ID Singularity + Approved RNO Copy (2026-06-24)
 
 - **base file:** `index.html`
