@@ -2,6 +2,14 @@
 
 This file is the canonical project log. Keep it in the repository root. Update it after every Claude Code round.
 
+## Round: Ontology ID Singularity + Approved RNO Copy (2026-06-24)
+
+- **base file:** `index.html`
+- **decision:** Migrated all ordered ontology IDs (RNO.04.x, MNO.04/05, RefO.04.x, RefO.05.1, RelO.04.x, RelO.05.x, RelO.MNO.04/05) to singular non-sequential content-hash IDs. Applied approved RNO bodies. Added FO.ALLAH, RefO.SAYERS_HUGINN_MUNINN_CORPSE__C003F76E, RefO.NI_MHAOLDOMHNAIGH_SCALD_CROW__694164EE. RelO labels set to opaque IDs; RelO shortLabels set to rel·XXXX forms. NameO attachment arrays updated to new RNO IDs. Added durable data integrity validator. Added Playwright Smoke GitHub Actions workflow.
+- **changed files:** `index.html`, `tests/black-bird-data-integrity.cjs` (new), `package.json`, `.github/workflows/playwright-smoke.yml` (new), `BLACK_BIRD_DECISIONS_CHANGELOG.md`, `docs/PROJECT_STATE.md`, `TESTING_REPORT.md`
+- **commands run:** `npm run test:data` → PASS (47 nodes); `npm test` → blocked (Chromium not installable in remote container; deferred to GitHub Actions)
+- **known risks:** Browser smoke must be verified via GitHub Actions CI on the PR branch. No visual/layout changes were made.
+
 ## Current direction
 
 The Black Bird is being stabilized as a single-file HTML artifact before any full repo migration. The next architecture may use Vite/TypeScript/D3 modules, but not until the experience is stable.

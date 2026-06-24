@@ -1,3 +1,12 @@
+# Testing Report — Black Bird
+
+## Round: ID Singularity + Approved RNO Copy (2026-06-24)
+
+- `npm run test:data` → **PASS** — 47 nodes, 0 errors. All ordered IDs migrated; FO.ALLAH and both new RefO objects present and connected; RelO labels opaque; RelO shortLabels rel·XXXX.
+- `npm test` (Playwright browser smoke) → **BLOCKED locally** — Chromium binary not installable in remote container. Deferred to GitHub Actions `playwright-smoke.yml` workflow on the PR branch.
+
+---
+
 # Testing Report — Black Bird Final Visual QA
 
 ## Environment
