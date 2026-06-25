@@ -2,6 +2,37 @@
 
 This file is the canonical project log. Keep it in the repository root. Update it after every Claude Code round.
 
+## 2026-06-25 — Verification tightening and repository hygiene (Phase 1 follow-up)
+
+Base file: `index.html`
+
+Goal: Tighten test verification and fix geometry guard without changing the approved mobile two-chamber design.
+
+Decisions:
+- `safeCoord()→0` pattern removed. `updateGraphGeometry()` and `drawRouteMemory()` now use `.each()` — only write SVG attributes when all four coordinates are finite; leave existing attribute values unchanged if any coord is non-finite. Eliminates phantom edges drawn to SVG origin (0,0).
+- Test 6 rewritten to exercise real onboarding (not `?skipIntro=1`): uses `emulateMedia({reducedMotion:'reduce'})` for fast animations, waits on observable `surface-field` class, asserts Black Bird focus ring is active.
+- Test 8 renamed and strengthened: first clears `activeId` by clicking empty SVG area, waits for `phase-field` class, then asserts specifically `FO.BLACK_BIRD_FIELD` in reader `.meta` element.
+- Test 11 rewritten: records `tappedId` via `parentElement.__data__?.id` before tap, verifies identity in Read `.meta`, verifies `phase-focused` class preserved after Field return, checks focus ring active on that node, checks node in central safe viewport region, checks route non-empty, re-opens Read and verifies same ID.
+- Test 14 added: verifies no SVG line has all four attrs at origin (`x1="0" y1="0" x2="0" y2="0"`) and no non-finite attribute values — the phantom-edge regression test for the old `safeCoord` pattern.
+- `test-results/.last-run.json` removed from git tracking; added to `.gitignore`. Screenshots preserved.
+
+Files changed:
+- `index.html` — removed `safeCoord()`; rewrote `updateGraphGeometry()` with `.each()` last-finite pattern; rewrote `drawRouteMemory()` enter.merge block with same pattern
+- `tests/black-bird-smoke.spec.js` — rewrote tests 6, 8, 11; added test 14; total now 14 tests
+- `.gitignore` — added `test-results/.last-run.json`
+- `BLACK_BIRD_DECISIONS_CHANGELOG.md` — this entry
+- `TESTING_REPORT.md` — updated with 14/14 results
+
+Commands run:
+- `npm run test:data` → PASS (50 nodes)
+- `npm test` → 14/14 passed (3.9m)
+
+Known risks:
+- Test 6 timeout set to 8s for `surface-field` class; real-device onboarding timing may vary.
+- `drawRouteMemory` enter block no longer sets initial coordinates — lines are invisible until the next tick when coordinates become finite. On settled sims this is instantaneous; on very early ticks there may be a single frame without route lines, which is imperceptible.
+
+---
+
 ## 2026-06-25 — Mobile two-chamber repair (Phase 1)
 
 Base file: `index.html`

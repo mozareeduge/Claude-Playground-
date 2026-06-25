@@ -392,12 +392,21 @@ svg.on('click',()=>{if(S.activeId) returnToField();});
 
 function nodeX(d){return d.x+(d.apDx||0);}
 function nodeY(d){return d.y+(d.apDy||0);}
-function safeCoord(v){return Number.isFinite(v)?v:0;}
 function updateGraphGeometry(){
-  function applyLine(sel){sel.attr('x1',d=>safeCoord(nodeX(d.source))).attr('y1',d=>safeCoord(nodeY(d.source))).attr('x2',d=>safeCoord(nodeX(d.target))).attr('y2',d=>safeCoord(nodeY(d.target)));}
+  function applyLine(sel){
+    sel.each(function(d){
+      const x1=nodeX(d.source),y1=nodeY(d.source),x2=nodeX(d.target),y2=nodeY(d.target);
+      if(Number.isFinite(x1)&&Number.isFinite(y1)&&Number.isFinite(x2)&&Number.isFinite(y2))
+        d3.select(this).attr('x1',x1).attr('y1',y1).attr('x2',x2).attr('y2',y2);
+    });
+  }
   applyLine(baseSel);applyLine(projSel);applyLine(projHitSel);
-  nodeSel.attr('transform',d=>{const x=nodeX(d),y=nodeY(d);return Number.isFinite(x)&&Number.isFinite(y)?`translate(${x},${y})`:null;});
-  routeMemoryLayer.selectAll('line.route-segment').attr('x1',d=>safeCoord(d.source.x)).attr('y1',d=>safeCoord(d.source.y)).attr('x2',d=>safeCoord(d.target.x)).attr('y2',d=>safeCoord(d.target.y));
+  nodeSel.each(function(d){const x=nodeX(d),y=nodeY(d);if(Number.isFinite(x)&&Number.isFinite(y))d3.select(this).attr('transform',`translate(${x},${y})`);});
+  routeMemoryLayer.selectAll('line.route-segment').each(function(d){
+    const x1=d.source.x,y1=d.source.y,x2=d.target.x,y2=d.target.y;
+    if(Number.isFinite(x1)&&Number.isFinite(y1)&&Number.isFinite(x2)&&Number.isFinite(y2))
+      d3.select(this).attr('x1',x1).attr('y1',y1).attr('x2',x2).attr('y2',y2);
+  });
 }
 function clearLocalAperture(){
   simNodes.forEach(d=>{d.apDx=0;d.apDy=0;});
@@ -737,10 +746,11 @@ function drawRouteMemory(opts={}){
   const enter=seg.enter().append('line').attr('class','route-segment')
     .attr('stroke','#c49a45').attr('stroke-width',0.55).attr('stroke-linecap','round')
     .attr('pointer-events','none').attr('stroke-opacity',0);
-  enter.merge(seg)
-    .attr('x1',d=>safeCoord(d.source.x)).attr('y1',d=>safeCoord(d.source.y))
-    .attr('x2',d=>safeCoord(d.target.x)).attr('y2',d=>safeCoord(d.target.y))
-    .transition().duration(prefersReducedMotion()?0:dur)
+  enter.merge(seg).each(function(d){
+    const x1=d.source.x,y1=d.source.y,x2=d.target.x,y2=d.target.y;
+    if(Number.isFinite(x1)&&Number.isFinite(y1)&&Number.isFinite(x2)&&Number.isFinite(y2))
+      d3.select(this).attr('x1',x1).attr('y1',y1).attr('x2',x2).attr('y2',y2);
+  }).transition().duration(prefersReducedMotion()?0:dur)
     .attr('stroke-opacity',d=>Math.max(0.06,0.42-d.age*0.055));
 }
 

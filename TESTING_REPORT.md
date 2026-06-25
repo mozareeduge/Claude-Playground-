@@ -1,5 +1,33 @@
 # Testing Report — Black Bird
 
+## 2026-06-25 — Verification tightening (Phase 1 follow-up)
+
+- `npm run test:data` → **PASS** — 50 nodes, 0 errors. Data ontology unchanged.
+- `npm test` (Playwright) → **14/14 PASS** (3.9m)
+
+| Test | Status | Notes |
+|---|---|---|
+| 1. Desktop onboarding to Black Bird | PASS | |
+| 2. Desktop Field refit from multiple focuses | PASS | |
+| 3. Desktop dense area aperture evidence | PASS | |
+| 4. Mobile Field surface | PASS | |
+| 5. Mobile Read surface | PASS | |
+| 6. Mobile onboarding ends in Field overview | PASS | Real onboarding; reducedMotion; focus ring asserted |
+| 7. Mobile node tap opens full Read | PASS | |
+| 8. Mobile Read fallback opens Black Bird when no object is active | PASS | activeId cleared; FO.BLACK_BIRD_FIELD asserted in .meta |
+| 9. Mobile inline link navigates within Read | PASS | |
+| 10. Mobile related object navigates within Read | PASS | |
+| 11. Mobile Field returns to graph with focus and identity preserved | PASS | tappedId verified; focus ring; safe zone; route; re-open |
+| 12. No console NaN errors on mobile | PASS | |
+| 13. No SVG line attributes receive NaN | PASS | |
+| 14. No phantom edges drawn to origin (0,0) | PASS | New: validates last-finite geometry guard |
+
+Screenshots: `test-results/black-bird-smoke/` — all 14 screenshots updated.
+
+Changes this round: `safeCoord()` removed; `updateGraphGeometry()` and `drawRouteMemory()` use `.each()` last-finite pattern. `test-results/.last-run.json` removed from git and gitignored.
+
+---
+
 ## 2026-06-25 — Mobile Two-Chamber Phase 1
 
 - `npm run test:data` → **PASS** — 50 nodes, 0 errors. Data ontology unchanged.
