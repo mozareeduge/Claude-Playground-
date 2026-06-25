@@ -392,12 +392,12 @@ svg.on('click',()=>{if(S.activeId) returnToField();});
 
 function nodeX(d){return d.x+(d.apDx||0);}
 function nodeY(d){return d.y+(d.apDy||0);}
+function safeCoord(v){return Number.isFinite(v)?v:0;}
 function updateGraphGeometry(){
-  baseSel.attr('x1',d=>nodeX(d.source)).attr('y1',d=>nodeY(d.source)).attr('x2',d=>nodeX(d.target)).attr('y2',d=>nodeY(d.target));
-  projSel.attr('x1',d=>nodeX(d.source)).attr('y1',d=>nodeY(d.source)).attr('x2',d=>nodeX(d.target)).attr('y2',d=>nodeY(d.target));
-  projHitSel.attr('x1',d=>nodeX(d.source)).attr('y1',d=>nodeY(d.source)).attr('x2',d=>nodeX(d.target)).attr('y2',d=>nodeY(d.target));
-  nodeSel.attr('transform',d=>`translate(${nodeX(d)},${nodeY(d)})`);
-  routeMemoryLayer.selectAll('line.route-segment').attr('x1',d=>nodeX(d.source)).attr('y1',d=>nodeY(d.source)).attr('x2',d=>nodeX(d.target)).attr('y2',d=>nodeY(d.target));
+  function applyLine(sel){sel.attr('x1',d=>safeCoord(nodeX(d.source))).attr('y1',d=>safeCoord(nodeY(d.source))).attr('x2',d=>safeCoord(nodeX(d.target))).attr('y2',d=>safeCoord(nodeY(d.target)));}
+  applyLine(baseSel);applyLine(projSel);applyLine(projHitSel);
+  nodeSel.attr('transform',d=>{const x=nodeX(d),y=nodeY(d);return Number.isFinite(x)&&Number.isFinite(y)?`translate(${x},${y})`:null;});
+  routeMemoryLayer.selectAll('line.route-segment').attr('x1',d=>safeCoord(d.source.x)).attr('y1',d=>safeCoord(d.source.y)).attr('x2',d=>safeCoord(d.target.x)).attr('y2',d=>safeCoord(d.target.y));
 }
 function clearLocalAperture(){
   simNodes.forEach(d=>{d.apDx=0;d.apDy=0;});
@@ -480,7 +480,7 @@ nodeSel.attr('tabindex',0).attr('role','button').attr('aria-label',d=>`${d.type}
   .on('click',(ev,d)=>{
     ev.stopPropagation(); hidePreview();
     if(S.onboardingActive){S.onboardingActive=false;hideFieldPrompt();return focusObject(d.id,{source:'onboarding-interrupt'});}
-    if(isMobile()) return showNodePreviewSheet(d.id);
+    if(isMobile()) return focusObject(d.id,{source:'graph-mobile'});
     focusObject(d.id,{source:'graph'});
   })
   .on('keydown',(ev,d)=>{
@@ -538,7 +538,7 @@ function updateLabelVisibility(context={}){
       if(d.id===S.activeId) return null;
       if(focusIds&&focusIds.has(d.id)) return null;
       if(k<0.85) return 'none';
-      if((d.type==='RefO'||d.type==='RelO')&&k<1.15) return 'none';
+      if(d.type==='RefO'||d.type==='RelO'){if(isMobile()||k<1.15) return 'none';}
       if(d.type==='NameO'&&!S.viewOptions.sourceNames) return 'none';
       return null;
     }).classed('quiet',d=>d.type==='NameO'||d.type==='RefO');
@@ -738,8 +738,8 @@ function drawRouteMemory(opts={}){
     .attr('stroke','#c49a45').attr('stroke-width',0.55).attr('stroke-linecap','round')
     .attr('pointer-events','none').attr('stroke-opacity',0);
   enter.merge(seg)
-    .attr('x1',d=>d.source.x).attr('y1',d=>d.source.y)
-    .attr('x2',d=>d.target.x).attr('y2',d=>d.target.y)
+    .attr('x1',d=>safeCoord(d.source.x)).attr('y1',d=>safeCoord(d.source.y))
+    .attr('x2',d=>safeCoord(d.target.x)).attr('y2',d=>safeCoord(d.target.y))
     .transition().duration(prefersReducedMotion()?0:dur)
     .attr('stroke-opacity',d=>Math.max(0.06,0.42-d.age*0.055));
 }
@@ -1045,12 +1045,24 @@ document.querySelectorAll('[data-action]').forEach(b=>b.onclick=async()=>{
 });
 document.querySelectorAll('[data-mobile]').forEach(b=>b.onclick=async()=>{
   const a=b.dataset.mobile;
-  if(a==='field') return returnToField({source:'mobile-nav'});
+  if(a==='field'){
+    if(isMobile()&&S.activeId){
+      const fid=S.activeId;
+      S.surface='field'; updatePhaseClass();
+      closeAllDrawers(); closeSheet(); hidePreview();
+      await nextFrame(); measureGraph(); await nextFrame();
+      const focus=buildFocusSet(fid);
+      applyLocalAperture(focus);
+      fitFocusFrame(focus,{duration:680});
+    } else { returnToField({source:'mobile-nav'}); }
+    return;
+  }
   if(a==='read'){
-    if(!S.activeId) return;
+    const readTarget=S.activeId||'FO.BLACK_BIRD_FIELD';
     S.phase='focused'; S.surface='read'; updatePhaseClass();
     await setReaderOpen(true,{measure:false});
-    renderNodePanel(S.activeId);
+    if(!S.activeId){S.activeId=readTarget;registerRouteEvent(readTarget,{source:'read-btn'});}
+    renderNodePanel(readTarget);
     return;
   }
   if(a==='view') openDrawer('fieldViewDrawer');
@@ -1106,14 +1118,17 @@ async function finishOnboarding(){
   await sleep(prefersReducedMotion()?0:420);
 
   S.phase='focused';
-  S.surface=isMobile()?'read':'field';
+  S.surface='field';
   updatePhaseClass();
-  await setReaderOpen(true,{waitTransition:true,transitionMs:isMobile()?0:680,measure:!(isMobile()&&S.surface==='read')});
+
+  if(!isMobile()){
+    await setReaderOpen(true,{waitTransition:true,transitionMs:680,measure:true});
+  }
 
   await focusObject(id,{
     source:'onboarding',
-    openReader:true,
-    cameraDuration:prefersReducedMotion()?0:(isMobile()?0:520),
+    openReader:!isMobile(),
+    cameraDuration:prefersReducedMotion()?0:680,
     lightDuration:prefersReducedMotion()?0:180,
     readerDelay:0
   });
@@ -1125,7 +1140,7 @@ async function enter(opts={}){
   th.classList.add('leaving');
   await sleep(prefersReducedMotion()?0:520);
   th.style.display='none';
-  if(opts.skipOnboarding){S.phase='focused';S.surface=isMobile()?'read':'field';updatePhaseClass();await setReaderOpen(true,{waitTransition:true,transitionMs:520,measure:!(isMobile()&&S.surface==='read')});await focusObject('FO.BLACK_BIRD_FIELD',{source:'direct-enter',openReader:true});return;}
+  if(opts.skipOnboarding){S.phase='focused';S.surface='field';updatePhaseClass();if(!isMobile()){await setReaderOpen(true,{waitTransition:true,transitionMs:520,measure:true});}await focusObject('FO.BLACK_BIRD_FIELD',{source:'direct-enter',openReader:!isMobile()});return;}
   startTacitOnboarding();
 }
 document.querySelectorAll('[data-enter]').forEach(b=>b.onclick=()=>enter());
