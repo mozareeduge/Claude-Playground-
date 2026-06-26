@@ -2,6 +2,36 @@
 
 This file is the canonical project log. Keep it in the repository root. Update it after every Claude Code round.
 
+## 2026-06-26 — Phase 2A: Entry and MNO Reader integrity
+
+Base file: `index.html`
+
+Goal: Fix entry subtitle copy, center threshold button, repair MNO poem line integrity, prevent MNO reader font-size jump, and eliminate stale reader content flash on object transitions.
+
+Decisions:
+
+- **Entry subtitle**: Removed "SPECULATIVE" from threshold card `.sub`. Now reads `A HYPERGRAPH RESEARCH POEM`. Map header subtitle `HYPERGRAPH POEM` unchanged.
+- **Button alignment**: Added `text-align:center` to `.th-actions button` base rule. Changed mobile override from `text-align:left` to `text-align:center`. Covers both desktop and mobile.
+- **MNO line integrity (root cause)**: CSS rule was `.poem span{display:block}` — this made every `<span>` inside `.poem` a block element, including nested `.fl` link spans. Changed to `.poem > span{display:block}` so only direct-child line spans become block; nested `.fl` spans stay inline. This is the primary structural fix; no poem text content was changed.
+- **MNO stable first paint**: In `renderTextNode`, for MNO type, reader content is set with opacity 0 first, then `document.fonts.ready.then(...)` reveals it with a 0.12s fade. Skipped entirely when `prefers-reduced-motion` is active. This prevents the fallback-to-webfont reflow jump visible on first MNO open.
+- **Stale reader flash**: In `focusObject`, immediately before the `readerDelay` setTimeout, the reader `innerHTML` is cleared and `scrollTop` reset to 0. This ensures no stale content from the previous object is visible during the transition; the reader shows a neutral empty state during the 160ms delay.
+- **@playwright/test**: Updated from `^1.45.0` to `1.56.1` to match the pre-installed Chromium 1194 binary in `/opt/pw-browsers`.
+
+Files changed:
+- `index.html` — subtitle text, button text-align CSS (×2), `.poem > span` selector fix, MNO font-ready opacity reveal in `renderTextNode`, reader clear + scroll reset in `focusObject`
+- `tests/black-bird-smoke.spec.js` — added tests 15–21 (entry subtitle, mobile button alignment, MNO inline checks ×4, reader transition stale content)
+- `package.json` / `package-lock.json` — @playwright/test bumped to 1.56.1
+- `BLACK_BIRD_DECISIONS_CHANGELOG.md` — this entry
+
+Commands run:
+- `npm run test:data` — PASS (50 nodes)
+- `./node_modules/.bin/playwright test` — 21/21 passed
+
+Known risks:
+- `document.fonts.ready` resolves on first font load; on second visit to same MNO the promise resolves instantly, so no delay. No risk of long blank waits.
+- The 160ms empty-reader state on focus transitions is visually neutral (dark background matches panel). No visible white flash.
+- Ontology unchanged. RNO/MNO words unchanged. No new modes or icons.
+
 ## 2026-06-25 — Verification tightening and repository hygiene (Phase 1 follow-up)
 
 Base file: `index.html`

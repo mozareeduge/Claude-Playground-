@@ -495,4 +495,116 @@ test.describe('Black Bird smoke tests', () => {
     });
     expect(invalidLineCount).toBe(0);
   });
+
+  // ── Phase 2A: Entry + Reader/MNO integrity ────────────────────────────────
+
+  test('15. Entry subtitle is correct (no SPECULATIVE)', async ({ page }) => {
+    await page.setViewportSize({ width: 1440, height: 900 });
+    await page.goto(PAGE_URL);
+    const subtitle = page.locator('.threshold-card .sub');
+    await expect(subtitle).toBeVisible();
+    const text = await subtitle.textContent();
+    expect(text.trim()).toBe('A HYPERGRAPH RESEARCH POEM');
+    expect(text).not.toContain('SPECULATIVE');
+    await page.screenshot({ path: 'test-results/black-bird-smoke/desktop-entry-threshold.png' });
+  });
+
+  test('16. Mobile entry threshold — subtitle correct and button centered', async ({ page }) => {
+    await page.setViewportSize({ width: 390, height: 844 });
+    await page.goto(PAGE_URL);
+    const subtitle = page.locator('.threshold-card .sub');
+    await expect(subtitle).toBeVisible();
+    const text = await subtitle.textContent();
+    expect(text.trim()).toBe('A HYPERGRAPH RESEARCH POEM');
+    expect(text).not.toContain('SPECULATIVE');
+    // Button text-align is center
+    const btn = page.locator('.th-actions button').first();
+    const textAlign = await btn.evaluate(el => getComputedStyle(el).textAlign);
+    expect(textAlign).toBe('center');
+    await page.screenshot({ path: 'test-results/black-bird-smoke/mobile-entry-threshold.png' });
+  });
+
+  test('17. MNO Black Ring — linked spans remain inline (desktop)', async ({ page }) => {
+    await page.setViewportSize({ width: 1440, height: 900 });
+    await page.goto(SKIP_URL);
+    await page.waitForTimeout(1500);
+    // Find and click the Black Ring MNO node
+    await page.evaluate(() => { window.__testFocus = true; });
+    await page.evaluate(() => { focusObject('MNO.BLACK_RING_FORENSIC__A84A665E', { source: 'test' }); });
+    await page.waitForTimeout(800);
+    // .fl spans inside .poem must be computed as inline, not block
+    const blockFls = await page.evaluate(() => {
+      return Array.from(document.querySelectorAll('.poem .fl')).filter(el => {
+        return getComputedStyle(el).display !== 'inline';
+      }).length;
+    });
+    expect(blockFls).toBe(0);
+    await page.screenshot({ path: 'test-results/black-bird-smoke/desktop-mno-black-ring.png' });
+  });
+
+  test('18. MNO Black Ring — linked spans remain inline (mobile)', async ({ page }) => {
+    await page.setViewportSize({ width: 390, height: 844 });
+    await page.goto(SKIP_URL);
+    await page.waitForTimeout(1500);
+    await page.evaluate(() => { focusObject('MNO.BLACK_RING_FORENSIC__A84A665E', { source: 'test' }); });
+    await page.waitForTimeout(800);
+    const blockFls = await page.evaluate(() => {
+      return Array.from(document.querySelectorAll('.poem .fl')).filter(el => {
+        return getComputedStyle(el).display !== 'inline';
+      }).length;
+    });
+    expect(blockFls).toBe(0);
+    await page.screenshot({ path: 'test-results/black-bird-smoke/mobile-mno-black-ring.png' });
+  });
+
+  test('19. MNO Window — linked spans remain inline (desktop)', async ({ page }) => {
+    await page.setViewportSize({ width: 1440, height: 900 });
+    await page.goto(SKIP_URL);
+    await page.waitForTimeout(1500);
+    await page.evaluate(() => { focusObject('MNO.WINDOW_DARKNESS__F488DD0A', { source: 'test' }); });
+    await page.waitForTimeout(800);
+    const blockFls = await page.evaluate(() => {
+      return Array.from(document.querySelectorAll('.poem .fl')).filter(el => {
+        return getComputedStyle(el).display !== 'inline';
+      }).length;
+    });
+    expect(blockFls).toBe(0);
+    await page.screenshot({ path: 'test-results/black-bird-smoke/desktop-mno-window.png' });
+  });
+
+  test('20. MNO Window — linked spans remain inline (mobile)', async ({ page }) => {
+    await page.setViewportSize({ width: 390, height: 844 });
+    await page.goto(SKIP_URL);
+    await page.waitForTimeout(1500);
+    await page.evaluate(() => { focusObject('MNO.WINDOW_DARKNESS__F488DD0A', { source: 'test' }); });
+    await page.waitForTimeout(800);
+    const blockFls = await page.evaluate(() => {
+      return Array.from(document.querySelectorAll('.poem .fl')).filter(el => {
+        return getComputedStyle(el).display !== 'inline';
+      }).length;
+    });
+    expect(blockFls).toBe(0);
+    await page.screenshot({ path: 'test-results/black-bird-smoke/mobile-mno-window.png' });
+  });
+
+  test('21. Reader transition — no stale content from previous object', async ({ page }) => {
+    await page.setViewportSize({ width: 1440, height: 900 });
+    await page.goto(SKIP_URL);
+    await page.waitForTimeout(1500);
+    // Open first object
+    await page.evaluate(() => { focusObject('MNO.BLACK_RING_FORENSIC__A84A665E', { source: 'test' }); });
+    await page.waitForTimeout(600);
+    const firstTitle = await page.locator('#reader .title').textContent();
+    // Navigate to a different object
+    await page.evaluate(() => { focusObject('MNO.WINDOW_DARKNESS__F488DD0A', { source: 'test' }); });
+    // Immediately after navigate, reader should not contain first object's title
+    await page.waitForTimeout(50);
+    const readerContent = await page.locator('#reader').innerHTML();
+    expect(readerContent).not.toContain(firstTitle.trim());
+    await page.waitForTimeout(600);
+    // After settle, should show the second object
+    const secondTitle = await page.locator('#reader .title').textContent();
+    expect(secondTitle).toContain('Until It Saw Through My Window');
+    await page.screenshot({ path: 'test-results/black-bird-smoke/desktop-reader-transition.png' });
+  });
 });
