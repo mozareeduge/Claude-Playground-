@@ -2,6 +2,45 @@
 
 This file is the canonical project log. Keep it in the repository root. Update it after every Claude Code round.
 
+## 2026-06-26 — Visual polish: mobile solo framing + reader bottom padding
+
+Branch: `claude/mobile-solo-reader-polish`
+Base file: `index.html`
+
+Goal: Address two non-blocking visual concerns from audit v3 (2026-06-26).
+
+### Problem 1: Solo subgraphs biased to lower-center of mobile Field viewport
+
+`fitVisibleField` centers on `height/2` (50%). For mobile solo views where the cluster is small and compact, this placed the cluster in the lower half, leaving empty dark space above the header. Added a conditional vertical bias for mobile+solo: `height * 0.42` instead of `height / 2`. The guard `isMobile() && S.soloSet` ensures desktop and non-solo field views are unaffected.
+
+### Problem 2: Corpse Read last RelO row clipped at mobile reader container edge
+
+On 390×844 mobile, the reader container (panel height − route height) was 788 − 50 = 738px. Corpse Read content (5 appears-in items with multi-line labels + 5 RelO rows + section headers + padding) exceeded this by ~5-15px, placing the last RelO row at the reader container's lower edge. Fixed by:
+- Reducing mobile route strip from `height:50px` to `height:44px` (+6px for reader)
+- Reducing mobile reader top padding from `34px` to `26px` (+8px effective content space)
+- Combined: reader gains 14px, last row now clearly visible above the container edge
+
+### Changes
+- `index.html`: 3 targeted edits (1 JS line in `fitVisibleField`, 2 CSS values in `@media (max-width:860px)`)
+- `playwright.config.js`: Changed `executablePath` to use the `/opt/pw-browsers/chromium` symlink (was hardcoded to `chromium-1194` which Playwright 1.45.0 ignores when `PLAYWRIGHT_BROWSERS_PATH` is set)
+- `BLACK_BIRD_DECISIONS_CHANGELOG.md`: this entry
+
+### Not changed
+- Ontology, node labels, prose, poem text, RelO IDs — unchanged
+- Interaction contract — unchanged (node tap stays field, Read → read, Index solo → field)
+- Preview sheet — not added
+- Tests — not changed (existing 29 smoke tests all pass)
+- Screenshot baselines — not changed (tests use path-based screenshots, no `toMatchSnapshot`)
+- Dependencies — not changed
+
+### Validation
+- `npm run test:data` → PASS (50 nodes)
+- `npm test` → 29/29 PASS
+- Visual audit v4: solo Corpse cluster now upper-center; solo Allah/Odin/God shifted upward; Corpse Read all 5 RelO rows visible with breathing room above nav
+- No desktop regression (bias guard is mobile+soloSet only)
+
+Known risks: none. The solo bias of 0.42 shifts clusters up by ~63px on 788px mapWrap. Clusters with very few nodes may still have empty lower space (inherent to compact soloSets). The route height reduction (50→44px) is uniform across all mobile states where the route strip is shown.
+
 ## 2026-06-26 — Phase 2B-emergency: Real onboarding surface contract tests
 
 Branch: `claude/emergency-mobile-read-solo-contract`

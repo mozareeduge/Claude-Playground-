@@ -148,8 +148,8 @@ button,input{font:inherit}
   .map-title h1{font-size:13px;letter-spacing:.28em}
   .map-title div{font-size:9px}
   .map-tools{right:14px;top:14px}
-  .route{height:50px;padding:0 18px;font-size:10px;}
-  .reader{padding:34px 22px 86px;}
+  .route{height:44px;padding:0 18px;font-size:10px;}
+  .reader{padding:26px 22px 86px;}
   .title{font-size:13px;letter-spacing:.22em}
   .prose{font-size:17px;line-height:1.74}
   .poem{font-size:20px;line-height:1.82;max-width:340px}
@@ -600,7 +600,8 @@ function fitVisibleField(opts={}){
   const bounds=getNodeBounds(visible,isMobile()?44:88);
   const pad=isMobile()?44:88;
   const k=Math.max(0.55,Math.min((width-pad*2)/bounds.width,(height-pad*2)/bounds.height,0.92));
-  const tx=width/2-k*bounds.cx,ty=height/2-k*bounds.cy;
+  const cy=(isMobile()&&S.soloSet)?height*0.42:height/2;
+  const tx=width/2-k*bounds.cx,ty=cy-k*bounds.cy;
   animateCamera(d3.zoomIdentity.translate(tx,ty).scale(k),{duration:opts.duration??850});
 }
 function fitGraph(dur){return fitVisibleField({duration:dur});}
