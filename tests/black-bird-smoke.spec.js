@@ -811,6 +811,183 @@ test.describe('Black Bird smoke tests', () => {
     expect(outsideSoloSegments).toBe(0);
   });
 
+  // ── Phase 2B-emergency: Real onboarding node-tap and Index solo surface contract ──
+
+  test('27. REAL onboarding — node tap after Read-return stays Field (Test A)', async ({ page }) => {
+    await page.setViewportSize({ width: 390, height: 844 });
+    // Use reducedMotion so onboarding completes fast
+    await page.emulateMedia({ reducedMotion: 'reduce' });
+    const errors = [];
+    page.on('pageerror', e => errors.push(e.message));
+
+    await page.goto(PAGE_URL); // NOTE: NO skipIntro=1 — real user path
+    const enterBtn = page.locator('button', { hasText: /enter/i }).first();
+    await enterBtn.waitFor({ state: 'visible', timeout: 6000 });
+    await enterBtn.click();
+
+    // Wait for onboarding to finish: app should be in surface-field + phase-focused
+    const appEl = page.locator('#app');
+    await expect(appEl).toHaveClass(/surface-field/, { timeout: 10000 });
+    await expect(appEl).toHaveClass(/phase-focused/, { timeout: 5000 });
+
+    await page.screenshot({ path: 'test-results/black-bird-smoke/mobile-real-onboarding-after-read-return-field.png' });
+
+    // Tap bottom Read → should open Black Bird in Read
+    const readBtn = page.locator('[data-mobile="read"]');
+    await readBtn.click();
+    await page.waitForTimeout(600);
+    await expect(appEl).toHaveClass(/surface-read/);
+
+    // Tap bottom Field → return to Field
+    const fieldBtn = page.locator('[data-mobile="field"]');
+    await fieldBtn.click();
+    await page.waitForTimeout(600);
+    await expect(appEl).toHaveClass(/surface-field/);
+
+    // Find a node that is NOT Black Bird (prefer Allah or Corpse)
+    const tapTargetId = await page.evaluate(() => {
+      const preferred = ['FO.ALLAH', 'FO.CORPSE', 'FO.CAIN'];
+      for (const id of preferred) {
+        const node = Array.from(document.querySelectorAll('g.node')).find(n => n.__data__?.id === id);
+        if (node) {
+          const hit = node.querySelector('.node-hit');
+          if (hit) return id;
+        }
+      }
+      // Fallback: first node that isn't Black Bird
+      for (const node of document.querySelectorAll('g.node')) {
+        if (node.__data__?.id !== 'FO.BLACK_BIRD_FIELD') {
+          const hit = node.querySelector('.node-hit');
+          if (hit) return node.__data__?.id;
+        }
+      }
+      return null;
+    });
+    expect(tapTargetId).not.toBeNull();
+
+    // Tap that node
+    const tapTarget = page.locator(`g.node`).filter({ has: page.locator(`.node-hit`) }).first();
+    // Use evaluate to click via JS to ensure we hit the right node
+    await page.evaluate((id) => {
+      const node = Array.from(document.querySelectorAll('g.node')).find(n => n.__data__?.id === id);
+      if (node) node.querySelector('.node-hit')?.dispatchEvent(new MouseEvent('click', { bubbles: true }));
+    }, tapTargetId);
+    await page.waitForTimeout(900);
+
+    await page.screenshot({ path: 'test-results/black-bird-smoke/mobile-real-node-tap-stays-field.png' });
+
+    // MUST stay in surface-field (this is the bug — it currently jumps to surface-read)
+    await expect(appEl).toHaveClass(/surface-field/);
+    await expect(appEl).not.toHaveClass(/surface-read/);
+
+    // Panel must not be visible
+    await expect(page.locator('.panel')).not.toBeVisible();
+
+    // activeId must be the tapped node
+    const activeId = await page.evaluate(() => window.__bbState?.activeId);
+    expect(activeId).toBe(tapTargetId);
+
+    // Tap Read → should open tapped node (not Black Bird)
+    await readBtn.click();
+    await page.waitForTimeout(700);
+    await expect(appEl).toHaveClass(/surface-read/);
+    const meta = await page.locator('#reader .meta').textContent();
+    expect(meta).toContain(tapTargetId);
+
+    await page.screenshot({ path: 'test-results/black-bird-smoke/mobile-real-read-after-selected-node.png' });
+
+    expect(errors).toHaveLength(0);
+  });
+
+  test('28. REAL Read→Index→solo goes to Field not Read (Test B)', async ({ page }) => {
+    await page.setViewportSize({ width: 390, height: 844 });
+    await page.emulateMedia({ reducedMotion: 'reduce' });
+    const errors = [];
+    page.on('pageerror', e => errors.push(e.message));
+
+    await page.goto(PAGE_URL); // NO skipIntro=1
+    const enterBtn = page.locator('button', { hasText: /enter/i }).first();
+    await enterBtn.waitFor({ state: 'visible', timeout: 6000 });
+    await enterBtn.click();
+
+    const appEl = page.locator('#app');
+    await expect(appEl).toHaveClass(/surface-field/, { timeout: 10000 });
+    await expect(appEl).toHaveClass(/phase-focused/, { timeout: 5000 });
+
+    // Tap Read to enter Read mode
+    const readBtn = page.locator('[data-mobile="read"]');
+    await readBtn.click();
+    await page.waitForTimeout(600);
+    await expect(appEl).toHaveClass(/surface-read/);
+
+    // Open Index
+    const indexBtn = page.locator('[data-mobile="index"]');
+    await indexBtn.click();
+    await page.waitForTimeout(600);
+
+    // Tap solo for Corpse
+    const soloBtn = page.locator('[data-solo="FO.CORPSE"]');
+    await expect(soloBtn).toBeVisible({ timeout: 3000 });
+    await soloBtn.click();
+    await page.waitForTimeout(900);
+
+    await page.screenshot({ path: 'test-results/black-bird-smoke/mobile-real-index-solo-corpse-field.png' });
+
+    // MUST be surface-field (NOT surface-read) — this is Bug 2
+    await expect(appEl).toHaveClass(/surface-field/);
+    await expect(appEl).not.toHaveClass(/surface-read/);
+    await expect(appEl).toHaveClass(/phase-focused/);
+
+    // Panel must not be visible
+    await expect(page.locator('.panel')).not.toBeVisible();
+
+    // activeId must be Corpse
+    const activeId = await page.evaluate(() => window.__bbState?.activeId);
+    expect(activeId).toBe('FO.CORPSE');
+
+    // soloSet must exist
+    const hasSoloSet = await page.evaluate(() => window.__bbState?.soloSet !== null && window.__bbState?.soloSet?.size > 0);
+    expect(hasSoloSet).toBe(true);
+
+    // Tap Read → should open Corpse
+    await readBtn.click();
+    await page.waitForTimeout(700);
+    await expect(appEl).toHaveClass(/surface-read/);
+    const meta = await page.locator('#reader .meta').textContent();
+    expect(meta).toContain('FO.CORPSE');
+
+    await page.screenshot({ path: 'test-results/black-bird-smoke/mobile-real-index-solo-read-afterwards.png' });
+
+    expect(errors).toHaveLength(0);
+  });
+
+  test('29. Mobile top Field/View buttons hidden on mobile (live check)', async ({ page }) => {
+    await page.setViewportSize({ width: 390, height: 844 });
+    await page.emulateMedia({ reducedMotion: 'reduce' });
+    await page.goto(PAGE_URL);
+    const enterBtn = page.locator('button', { hasText: /enter/i }).first();
+    await enterBtn.waitFor({ state: 'visible', timeout: 6000 });
+    await enterBtn.click();
+    const appEl = page.locator('#app');
+    await expect(appEl).toHaveClass(/surface-field/, { timeout: 10000 });
+
+    // Top map-tools must be hidden
+    const mapTools = page.locator('.map-tools');
+    const toolsVisible = await mapTools.evaluate(el => {
+      const style = getComputedStyle(el);
+      return style.display !== 'none' && style.visibility !== 'hidden' && parseFloat(style.opacity) > 0;
+    });
+    expect(toolsVisible).toBe(false);
+
+    // Bottom nav must have 4 buttons
+    await expect(page.locator('[data-mobile="field"]')).toBeVisible();
+    await expect(page.locator('[data-mobile="read"]')).toBeVisible();
+    await expect(page.locator('[data-mobile="view"]')).toBeVisible();
+    await expect(page.locator('[data-mobile="index"]')).toBeVisible();
+
+    await page.screenshot({ path: 'test-results/black-bird-smoke/mobile-no-top-duplicate-controls.png' });
+  });
+
   test('26. Black Bird appears in solo only when part of relation set', async ({ page }) => {
     await page.setViewportSize({ width: 400, height: 650 });
     await page.goto(SKIP_URL);

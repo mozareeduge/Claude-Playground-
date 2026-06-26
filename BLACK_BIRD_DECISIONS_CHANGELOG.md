@@ -2,6 +2,39 @@
 
 This file is the canonical project log. Keep it in the repository root. Update it after every Claude Code round.
 
+## 2026-06-26 — Phase 2B-emergency: Real onboarding surface contract tests
+
+Branch: `claude/emergency-mobile-read-solo-contract`
+Base file: `index.html`
+
+Goal: Add reproduction tests for reported mobile bugs (node tap jumps to Read after returning from Read; Index solo goes to Read instead of Field) using the REAL onboarding flow without `skipIntro=1`.
+
+Diagnosis:
+- Bug 1 (node tap jumps to Read after returning from Read) and Bug 2 (Index solo goes to Read) were reported by user on live mobile.
+- Investigation showed: existing tests (7, 9, 11, 23) covered these behaviors but used `skipIntro=1` (direct entry), bypassing the real onboarding flow.
+- Running new tests with the REAL onboarding path (`enter()` → tacit onboarding → `finishOnboarding()` → `focusObject`) revealed that the existing code from Phase 2B already handles these cases correctly: `selectInField` sets `S.surface='field'` and the CSS `surface-field.phase-focused .panel { display:none!important }` hides the reader panel; the `[data-solo]` handler sets `S.surface='field'` before rendering.
+- The previous Phase 2B PR fixed the code. The gap was test coverage: no tests verified the real onboarding sequence.
+
+Fix applied:
+- No code changes to `index.html` were needed — the behaviors are already correct.
+- Three new Playwright tests added (27, 28, 29) covering the real onboarding path without `skipIntro=1`:
+  - Test 27 (Real onboarding → Read → Field → node tap stays Field): uses `reducedMotion` to collapse onboarding, enters without skipIntro, taps Read, returns to Field, taps a non-Black-Bird node, asserts `surface-field`.
+  - Test 28 (Real Read → Index → solo goes to Field): enters without skipIntro, taps Read, opens Index, taps solo for Corpse, asserts `surface-field`.
+  - Test 29 (Top mobile controls hidden after real onboarding): verifies `.map-tools` is hidden and bottom nav is visible.
+
+Files changed:
+- `tests/black-bird-smoke.spec.js` — tests 27, 28, 29 added
+- `BLACK_BIRD_DECISIONS_CHANGELOG.md` — this entry
+- `TESTING_REPORT.md` — updated
+
+Commands run:
+- `npm run test:data` — PASS (50 nodes)
+- `npm test` — PASS (29/29)
+
+Known risks:
+- As noted in Phase 2B changelog: `selectInField` uses `setReaderOpen(true)` to ensure the `reader-open` CSS class is present (needed for the `surface-field` override rules to apply). This is counter-intuitive but required by the CSS contract.
+- The real onboarding tests use `reducedMotion` to avoid multi-second waits. Without it, the onboarding would take ~8+ seconds in tests.
+
 ## 2026-06-26 — Phase 2B: Mobile Field solo and Index behavior
 
 Branch: `claude/mobile-field-solo-index`

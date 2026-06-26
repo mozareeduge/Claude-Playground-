@@ -1,5 +1,30 @@
 # Testing Report — Black Bird
 
+## 2026-06-26 — Phase 2B-emergency: Real onboarding surface contract tests
+
+- `npm run test:data` → **PASS** — 50 nodes, 0 errors. Ontology unchanged.
+- `npm test` (Playwright) → **29/29 PASS** (~7.6m)
+
+| Test | Status | Notes |
+|---|---|---|
+| 27. REAL onboarding — node tap after Read-return stays Field (Test A) | PASS | Real path: enter→onboard→Read→Field→node tap; asserts surface-field |
+| 28. REAL Read→Index→solo goes to Field not Read (Test B) | PASS | Real path: enter→onboard→Read→Index→solo; asserts surface-field |
+| 29. Mobile top Field/View buttons hidden on mobile (live check) | PASS | Real onboarding path; .map-tools hidden; bottom nav visible |
+
+Diagnosis note: The reported bugs (node tap jumps to Read after returning from Read; solo goes to Read instead of Field) were already fixed in Phase 2B code. The gap was test coverage — existing tests used `skipIntro=1` which bypasses real onboarding. New tests 27–29 use the real entry path with `reducedMotion` to make onboarding testable.
+
+Live site (mozareeduge.github.io) not reachable from test environment (proxy blocks external traffic). Tests run against local `file://` URL.
+
+Screenshots:
+- `mobile-real-onboarding-after-read-return-field.png`
+- `mobile-real-node-tap-stays-field.png`
+- `mobile-real-read-after-selected-node.png`
+- `mobile-real-index-solo-corpse-field.png`
+- `mobile-real-index-solo-read-afterwards.png`
+- `mobile-no-top-duplicate-controls.png` (overwritten from test 29)
+
+---
+
 ## 2026-06-26 — Phase 2B: Mobile Field solo and Index behavior
 
 - `npm run test:data` → **PASS** — 50 nodes, 0 errors. Ontology unchanged.
