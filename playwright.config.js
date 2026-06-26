@@ -11,7 +11,7 @@ module.exports = defineConfig({
       name: 'chromium',
       use: {
         ...devices['Desktop Chrome'],
-        executablePath: '/opt/pw-browsers/chromium',
+        executablePath: '/opt/pw-browsers/chromium-1194/chrome-linux/chrome',
       },
     },
   ],
