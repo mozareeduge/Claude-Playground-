@@ -38,7 +38,7 @@ Files changed:
 
 Commands run:
 - `npm run test:data` — PASS (50 nodes)
-- `./node_modules/.bin/playwright test` — results pending
+- `npm test` — PASS (26/26)
 
 Known risks:
 - `selectInField` uses `setReaderOpen(true)` to ensure mobile layout CSS is applied correctly (surface-field hides .panel when reader-open class is present via CSS). This is slightly counter-intuitive but required by the CSS rules from Phase 1.
