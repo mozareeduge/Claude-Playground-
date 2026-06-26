@@ -2,6 +2,75 @@
 
 This file is the canonical project log. Keep it in the repository root. Update it after every Claude Code round.
 
+## 2026-06-25 — Verification tightening and repository hygiene (Phase 1 follow-up)
+
+Base file: `index.html`
+
+Goal: Tighten test verification and fix geometry guard without changing the approved mobile two-chamber design.
+
+Decisions:
+- `safeCoord()→0` pattern removed. `updateGraphGeometry()` and `drawRouteMemory()` now use `.each()` — only write SVG attributes when all four coordinates are finite; leave existing attribute values unchanged if any coord is non-finite. Eliminates phantom edges drawn to SVG origin (0,0).
+- Test 6 rewritten to exercise real onboarding (not `?skipIntro=1`): uses `emulateMedia({reducedMotion:'reduce'})` for fast animations, waits on observable `surface-field` class, asserts Black Bird focus ring is active.
+- Test 8 renamed and strengthened: first clears `activeId` by clicking empty SVG area, waits for `phase-field` class, then asserts specifically `FO.BLACK_BIRD_FIELD` in reader `.meta` element.
+- Test 11 rewritten: records `tappedId` via `parentElement.__data__?.id` before tap, verifies identity in Read `.meta`, verifies `phase-focused` class preserved after Field return, checks focus ring active on that node, checks node in central safe viewport region, checks route non-empty, re-opens Read and verifies same ID.
+- Test 14 added: verifies no SVG line has all four attrs at origin (`x1="0" y1="0" x2="0" y2="0"`) and no non-finite attribute values — the phantom-edge regression test for the old `safeCoord` pattern.
+- `test-results/.last-run.json` removed from git tracking; added to `.gitignore`. Screenshots preserved.
+
+Files changed:
+- `index.html` — removed `safeCoord()`; rewrote `updateGraphGeometry()` with `.each()` last-finite pattern; rewrote `drawRouteMemory()` enter.merge block with same pattern
+- `tests/black-bird-smoke.spec.js` — rewrote tests 6, 8, 11; added test 14; total now 14 tests
+- `.gitignore` — added `test-results/.last-run.json`
+- `BLACK_BIRD_DECISIONS_CHANGELOG.md` — this entry
+- `TESTING_REPORT.md` — updated with 14/14 results
+
+Commands run:
+- `npm run test:data` → PASS (50 nodes)
+- `npm test` → 14/14 passed (3.9m)
+
+Known risks:
+- Test 6 timeout set to 8s for `surface-field` class; real-device onboarding timing may vary.
+- `drawRouteMemory` enter block no longer sets initial coordinates — lines are invisible until the next tick when coordinates become finite. On settled sims this is instantaneous; on very early ticks there may be a single frame without route lines, which is imperceptible.
+
+---
+
+## 2026-06-25 — Mobile two-chamber repair (Phase 1)
+
+Base file: `index.html`
+
+Goal: Emergency mobile viability repair — separate Field Chamber (graph) from Read Chamber (full-screen reader). Fix SVG NaN geometry errors. Reduce RelO label collision on mobile.
+
+Decisions:
+- Mobile onboarding ends in Field Chamber (graph overview), not Read. On desktop, onboarding still ends in focused+reader-open state.
+- Mobile node tap now goes directly to full Read (no sheet detour). Sheet remains only for projected edge info.
+- Mobile Read button opens FO.BLACK_BIRD_FIELD as fallback when no object is focused.
+- Mobile Field button (from Read) returns to graph centered on current object — does not clear activeId. Graph lighting preserves focused state.
+- SVG geometry: added `safeCoord()` guard — all line x1/y1/x2/y2 attributes now guard against NaN/Infinity. Route memory segments also guarded.
+- RelO and RefO labels are fully hidden on mobile at all zoom levels (they caused dense label collisions). On desktop, existing threshold (k < 1.15) is preserved.
+- Data ontology: unchanged. RNO/MNO prose: unchanged.
+
+Files changed:
+- `index.html` — `safeCoord()` + `updateGraphGeometry()` NaN guard; `drawRouteMemory` NaN guard; `updateLabelVisibility` RelO/RefO mobile suppression; `finishOnboarding` mobile ends in Field; node click handler direct focusObject on mobile; mobile nav 'read' button with FO.BLACK_BIRD_FIELD fallback; mobile nav 'field' button two-chamber return; `enter({skipOnboarding:true})` mobile Field path
+- `tests/black-bird-smoke.spec.js` — expanded from 5 to 13 tests; added mobile two-chamber tests 6–13; screenshots: mobile-field-overview, mobile-node-tap-read, mobile-read-black-bird, mobile-return-field-focused, desktop-smoke
+- `BLACK_BIRD_DECISIONS_CHANGELOG.md` — this entry
+
+Commands run:
+- `npm run test:data` → PASS (50 nodes)
+- `npm test` → 13/13 passed
+
+Screenshots verified:
+- mobile-field-overview: full-height graph, Black Bird centered, no reader
+- mobile-node-tap-read: full-screen reader (RNO prose + refs + object chips)
+- mobile-read-black-bird: full-screen reader for FO.BLACK_BIRD_FIELD (appears-in list)
+- mobile-return-field-focused: graph centered on tapped node, focus aperture ring visible
+- desktop-smoke: graph+reader split with onboarding prompt — unchanged from prior
+
+Known risks:
+- Chromium symlink `/opt/pw-browsers/chromium-1124 → chromium-1194` required for @playwright/test 1.45.0 in this environment.
+- Mobile aperture visual quality and real-device font rendering need physical device QA.
+- Google Fonts still loaded from CDN.
+
+---
+
 ## Round: Add FO.GOD field object (2026-06-24)
 
 - **base file:** `index.html`
