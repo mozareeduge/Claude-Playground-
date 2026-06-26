@@ -133,3 +133,22 @@ Every changelog entry should include:
 - changed files,
 - commands run,
 - known risks.
+
+## Black Bird Claude Code operations
+
+Project skills are in `.claude/skills/`. See `.claude/README-black-bird-ops.md` for full guide.
+
+Quick reference:
+- Before any work: `/black-bird-preflight`
+- Before implementation: `/black-bird-task-plan <problem>`
+- Visual audit: `/black-bird-visual-audit`
+- Before merge: `/black-bird-pr-review`
+- After merge: `/black-bird-live-check <sha>`
+
+Rules:
+- Keep implementation PRs small and single-concern.
+- Do not change ontology or RNO/MNO prose unless explicitly requested.
+- Do not install plugins or enable agent teams without explicit approval.
+- Do not enable hooks without a separate reviewed PR.
+- Use `/clear` between unrelated tasks.
+- Use `/compact` before long sessions; preserve decisions, changed files, failing tests, exact selectors.
