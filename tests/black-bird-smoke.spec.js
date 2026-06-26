@@ -200,7 +200,7 @@ test.describe('Black Bird smoke tests', () => {
     expect(errors).toHaveLength(0);
   });
 
-  test('7. Mobile node tap opens full Read', async ({ page }) => {
+  test('7. Mobile node tap selects object in Field (not Read)', async ({ page }) => {
     await page.setViewportSize({ width: 400, height: 650 });
     const errors = [];
     page.on('pageerror', e => errors.push(e.message));
@@ -208,31 +208,57 @@ test.describe('Black Bird smoke tests', () => {
     await page.goto(SKIP_URL);
     await page.waitForTimeout(1500);
 
+    // Record which node will be tapped
+    const tappedId = await page.evaluate(() => {
+      const hitEl = document.querySelector('.node-hit');
+      return hitEl?.parentElement?.__data__?.id ?? null;
+    });
+    expect(tappedId).not.toBeNull();
+
     // Tap the first visible node
     const firstNode = page.locator('.node-hit').first();
     await firstNode.click({ force: true });
     await page.waitForTimeout(900);
 
-    await page.screenshot({ path: 'test-results/black-bird-smoke/mobile-node-tap-read.png' });
+    await page.screenshot({ path: 'test-results/black-bird-smoke/mobile-node-tap-field.png' });
 
-    // App must be in surface-read
+    // Phase 2B: mobile tap stays in surface-field, NOT surface-read
     const appEl = page.locator('#app');
+    await expect(appEl).toHaveClass(/surface-field/);
+
+    // Map must remain visible and full-height
+    const mapWrap = page.locator('#mapWrap');
+    await expect(mapWrap).toBeVisible();
+    const box = await mapWrap.boundingBox();
+    expect(box?.height).toBeGreaterThan(400);
+
+    // Reader panel must NOT be visible (surface=field hides it on mobile)
+    await expect(page.locator('.panel')).not.toBeVisible();
+
+    // Active object must be set (phase-focused)
+    await expect(appEl).toHaveClass(/phase-focused/);
+
+    // Focus ring must be on tapped node
+    const hasFocusRing = await page.evaluate((id) => {
+      for (const node of document.querySelectorAll('g.node')) {
+        if (node.__data__?.id === id) {
+          const ring = node.querySelector('.node-focus-ring');
+          const stroke = ring?.getAttribute('stroke');
+          const opacity = parseFloat(ring?.getAttribute('stroke-opacity') || '0');
+          return stroke && stroke !== 'transparent' && opacity > 0;
+        }
+      }
+      return false;
+    }, tappedId);
+    expect(hasFocusRing).toBe(true);
+
+    // Bottom Read button must then open that object in Read
+    const readBtn = page.locator('[data-mobile="read"]');
+    await readBtn.click();
+    await page.waitForTimeout(700);
     await expect(appEl).toHaveClass(/surface-read/);
-
-    // Reader must be visible and tall
-    const reader = page.locator('#reader');
-    await expect(reader).toBeVisible();
-    const box = await reader.boundingBox();
-    expect(box?.height).toBeGreaterThan(300);
-
-    // Reader must have content
-    const content = await reader.textContent();
-    expect(content?.trim().length).toBeGreaterThan(0);
-
-    // No sheet should be the primary reader (sheet is not the reader pane)
-    const sheetOpen = await page.locator('.sheet.open').count();
-    // Sheet should not be open (node tap goes straight to Read)
-    expect(sheetOpen).toBe(0);
+    const meta = await page.locator('#reader .meta').textContent();
+    expect(meta).toContain(tappedId);
 
     expect(errors).toHaveLength(0);
   });
@@ -271,13 +297,18 @@ test.describe('Black Bird smoke tests', () => {
     await page.goto(SKIP_URL);
     await page.waitForTimeout(1500);
 
-    // Enter Read by tapping a node that has inline links (tap any RNO/MNO)
+    // Phase 2B: node tap stays in Field; must use Read button to enter Read first
     const nodes = page.locator('.node-hit');
     const count = await nodes.count();
     let navigated = false;
     for (let i = 0; i < Math.min(count, 8); i++) {
+      // Tap node to select it in Field
       await nodes.nth(i).click({ force: true });
-      await page.waitForTimeout(700);
+      await page.waitForTimeout(600);
+
+      // Open Read via bottom Read button
+      await page.locator('[data-mobile="read"]').click();
+      await page.waitForTimeout(600);
 
       // Check if there's an inline link (.fl) in reader
       const inlineLinks = page.locator('#reader .fl');
@@ -286,6 +317,8 @@ test.describe('Black Bird smoke tests', () => {
         const firstTitle = await page.locator('#reader .title').textContent().catch(() => '');
         await inlineLinks.first().click();
         await page.waitForTimeout(700);
+        // Must still be in Read surface (inline links stay in Read)
+        await expect(page.locator('#app')).toHaveClass(/surface-read/);
         const newTitle = await page.locator('#reader .title').textContent().catch(() => '');
         // Title should have changed (navigated to a different object)
         if (firstTitle !== newTitle) {
@@ -333,7 +366,7 @@ test.describe('Black Bird smoke tests', () => {
     await expect(page.locator('#app')).toHaveClass(/surface-read/);
   });
 
-  test('11. Mobile Field returns to graph with focus and identity preserved', async ({ page }) => {
+  test('11. Mobile Field tap selects object; Read button opens it', async ({ page }) => {
     await page.setViewportSize({ width: 400, height: 650 });
     await page.goto(SKIP_URL);
     await page.waitForTimeout(1200);
@@ -345,22 +378,13 @@ test.describe('Black Bird smoke tests', () => {
     });
     expect(tappedId).not.toBeNull();
 
-    // Tap node → Read
+    // Phase 2B: Tap node → stays in Field (surface-field)
     await page.locator('.node-hit').first().click({ force: true });
-    await page.waitForTimeout(900);
-    await expect(page.locator('#app')).toHaveClass(/surface-read/);
-
-    // Confirm Read opened for that exact object
-    const readMeta = await page.locator('#reader .meta').textContent();
-    expect(readMeta).toContain(tappedId);
-
-    // Tap Field button
-    await page.locator('[data-mobile="field"]').click();
     await page.waitForTimeout(900);
 
     await page.screenshot({ path: 'test-results/black-bird-smoke/mobile-return-field-focused.png' });
 
-    // Must be in field surface, still phase-focused (activeId preserved)
+    // Must be in field surface, phase-focused
     await expect(page.locator('#app')).toHaveClass(/surface-field/);
     await expect(page.locator('#app')).toHaveClass(/phase-focused/);
 
@@ -404,11 +428,12 @@ test.describe('Black Bird smoke tests', () => {
     expect(box?.height).toBeGreaterThan(400);
     await expect(page.locator('.panel')).not.toBeVisible();
 
-    // Tap Read again — same object must reopen
+    // Tap Read → same object must open in Read
     await page.locator('[data-mobile="read"]').click();
     await page.waitForTimeout(800);
-    const readMeta2 = await page.locator('#reader .meta').textContent();
-    expect(readMeta2).toContain(tappedId);
+    await expect(page.locator('#app')).toHaveClass(/surface-read/);
+    const readMeta = await page.locator('#reader .meta').textContent();
+    expect(readMeta).toContain(tappedId);
   });
 
   test('12. No console NaN errors on mobile', async ({ page }) => {
@@ -606,5 +631,216 @@ test.describe('Black Bird smoke tests', () => {
     const secondTitle = await page.locator('#reader .title').textContent();
     expect(secondTitle).toContain('Until It Saw Through My Window');
     await page.screenshot({ path: 'test-results/black-bird-smoke/desktop-reader-transition.png' });
+  });
+
+  // ── Phase 2B: Mobile Field solo and Index ─────────────────────────────────
+
+  test('22. Solo computed from RelO participants (not adjacency)', async ({ page }) => {
+    await page.setViewportSize({ width: 400, height: 650 });
+    await page.goto(SKIP_URL);
+    await page.waitForTimeout(1500);
+
+    // Compute solo set for Corpse via the JS function
+    const soloResult = await page.evaluate(() => {
+      const id = 'FO.CORPSE';
+      return { soloSet: [...computeSoloSet(id)] };
+    });
+
+    const solo = soloResult.soloSet;
+
+    // Must include Corpse itself
+    expect(solo).toContain('FO.CORPSE');
+
+    // Must include RelOs that contain Corpse
+    // RelO.R4CB4A8D8 participants include FO.CORPSE
+    expect(solo).toContain('RelO.R4CB4A8D8');
+    // RelO.R847178B0 participants include FO.CORPSE
+    expect(solo).toContain('RelO.R847178B0');
+
+    // Must include other participants of those RelOs
+    // RelO.R4CB4A8D8 has FO.BLACK_BIRD_FIELD, FO.ALLAH, FO.CAIN, FO.BURIAL
+    expect(solo).toContain('FO.CAIN');
+    expect(solo).toContain('FO.BURIAL');
+
+    // Must NOT include objects from unrelated RelOs
+    // FO.ODIN is only in RelO.R2DA6BB75 and RelO.RB6E74D1A which don't include Corpse directly
+    const odinRelos = ['RelO.R2DA6BB75', 'RelO.RB6E74D1A'];
+    const corpseRelos = await page.evaluate(() => {
+      return Object.entries(DATA.relations)
+        .filter(([,parts]) => parts.includes('FO.CORPSE'))
+        .map(([rid]) => rid);
+    });
+    // Verify Odin's RelOs don't overlap with Corpse's RelOs
+    const odinReloCrossover = odinRelos.some(r => corpseRelos.includes(r));
+    if (!odinReloCrossover) {
+      // Only then assert Odin is absent from solo
+      expect(solo).not.toContain('FO.ODIN');
+    }
+  });
+
+  test('23. Index solo enters Field with solo graph (not Reader)', async ({ page }) => {
+    await page.setViewportSize({ width: 400, height: 650 });
+    const errors = [];
+    page.on('pageerror', e => errors.push(e.message));
+    await page.goto(SKIP_URL);
+    await page.waitForTimeout(1500);
+
+    // Open Index
+    await page.locator('[data-mobile="index"]').click();
+    await page.waitForTimeout(600);
+
+    // Find FO.CORPSE row by its solo button data attribute
+    const soloBtn = page.locator('[data-solo="FO.CORPSE"]');
+    await expect(soloBtn).toBeVisible();
+    await soloBtn.click();
+    await page.waitForTimeout(900);
+
+    await page.screenshot({ path: 'test-results/black-bird-smoke/mobile-index-solo-corpse.png' });
+
+    // Must be in Field surface (NOT Reader)
+    const appEl = page.locator('#app');
+    await expect(appEl).toHaveClass(/surface-field/);
+    await expect(appEl).toHaveClass(/phase-focused/);
+
+    // Reader must NOT be visible
+    await expect(page.locator('.panel')).not.toBeVisible();
+
+    // Map must be visible and full-height
+    const mapWrap = page.locator('#mapWrap');
+    await expect(mapWrap).toBeVisible();
+    const box = await mapWrap.boundingBox();
+    expect(box?.height).toBeGreaterThan(400);
+
+    // Active object must be Corpse
+    const activeId = await page.evaluate(() => window.__bbState?.activeId);
+    expect(activeId).toBe('FO.CORPSE');
+
+    // Solo set must be active
+    const hasSoloSet = await page.evaluate(() => window.__bbState?.soloSet !== null);
+    expect(hasSoloSet).toBe(true);
+
+    // Index drawer must be closed
+    const indexDrawer = page.locator('#objectDrawer');
+    await expect(indexDrawer).not.toHaveClass(/open/);
+
+    // Bottom Read button must open Corpse in Read
+    const readBtn = page.locator('[data-mobile="read"]');
+    await readBtn.click();
+    await page.waitForTimeout(700);
+    await expect(appEl).toHaveClass(/surface-read/);
+    const meta = await page.locator('#reader .meta').textContent();
+    expect(meta).toContain('FO.CORPSE');
+
+    expect(errors).toHaveLength(0);
+  });
+
+  test('24. Mobile top Field/View buttons hidden; bottom nav visible', async ({ page }) => {
+    await page.setViewportSize({ width: 400, height: 650 });
+    await page.goto(SKIP_URL);
+    await page.waitForTimeout(1500);
+
+    // Top .map-tools (contains Field and View) must be hidden on mobile
+    const mapTools = page.locator('.map-tools');
+    // Either not visible or display:none
+    const toolsVisible = await mapTools.evaluate(el => {
+      const style = getComputedStyle(el);
+      return style.display !== 'none' && style.visibility !== 'hidden' && style.opacity !== '0';
+    });
+    expect(toolsVisible).toBe(false);
+
+    // Bottom nav must be visible with all 4 buttons
+    const bottomNav = page.locator('.bottom-nav');
+    await expect(bottomNav).toBeVisible();
+    const fieldBtn = page.locator('[data-mobile="field"]');
+    const readBtn = page.locator('[data-mobile="read"]');
+    const viewBtn = page.locator('[data-mobile="view"]');
+    const indexBtn = page.locator('[data-mobile="index"]');
+    await expect(fieldBtn).toBeVisible();
+    await expect(readBtn).toBeVisible();
+    await expect(viewBtn).toBeVisible();
+    await expect(indexBtn).toBeVisible();
+
+    await page.screenshot({ path: 'test-results/black-bird-smoke/mobile-no-top-duplicate-controls.png' });
+  });
+
+  test('25. Route lines in solo exclude out-of-solo segments', async ({ page }) => {
+    await page.setViewportSize({ width: 400, height: 650 });
+    await page.goto(SKIP_URL);
+    await page.waitForTimeout(1500);
+
+    // Build up a route with several objects
+    const nodeIds = ['FO.CORPSE', 'FO.ODIN', 'FO.CAIN', 'FO.BLACK_BIRD_FIELD'];
+    for (const id of nodeIds) {
+      await page.evaluate((nid) => { focusObject(nid, { source: 'test' }); }, id);
+      await page.waitForTimeout(400);
+    }
+
+    // Return to field, then enter solo for Corpse via JS
+    await page.evaluate(() => {
+      window.__bbState.soloSet = computeSoloSet('FO.CORPSE');
+      window.__bbState.activeId = 'FO.CORPSE';
+      updateVisibility();
+      drawRouteMemory({ duration: 0 });
+    });
+    await page.waitForTimeout(600);
+
+    await page.screenshot({ path: 'test-results/black-bird-smoke/mobile-route-lines-in-solo.png' });
+
+    // No route segment SVG line should have NaN coordinates
+    const nanSegments = await page.evaluate(() => {
+      return Array.from(document.querySelectorAll('.route-segment')).filter(l => {
+        return ['x1','y1','x2','y2'].some(a => {
+          const v = l.getAttribute(a); return v !== null && !isFinite(parseFloat(v));
+        });
+      }).length;
+    });
+    expect(nanSegments).toBe(0);
+
+    // All visible route segments must have both endpoints in the solo set
+    const outsideSoloSegments = await page.evaluate(() => {
+      const soloSet = window.__bbState?.soloSet;
+      if (!soloSet) return 0;
+      return Array.from(document.querySelectorAll('.route-segment')).filter(l => {
+        const d = l.__data__;
+        if (!d) return false;
+        const srcId = d.source?.id;
+        const tgtId = d.target?.id;
+        return (srcId && !soloSet.has(srcId)) || (tgtId && !soloSet.has(tgtId));
+      }).length;
+    });
+    expect(outsideSoloSegments).toBe(0);
+  });
+
+  test('26. Black Bird appears in solo only when part of relation set', async ({ page }) => {
+    await page.setViewportSize({ width: 400, height: 650 });
+    await page.goto(SKIP_URL);
+    await page.waitForTimeout(1500);
+
+    // For FO.CAIN: check if Black Bird is in its RelO participants
+    const corpseCheck = await page.evaluate(() => {
+      const soloSet = computeSoloSet('FO.CAIN');
+      const bbInSolo = soloSet.has('FO.BLACK_BIRD_FIELD');
+      // Verify: is Black Bird actually in any of Cain's RelOs?
+      const cainsRelos = Object.entries(DATA.relations)
+        .filter(([,parts]) => parts.includes('FO.CAIN'))
+        .map(([rid,parts]) => ({ rid, parts }));
+      const bbInReloParts = cainsRelos.some(r => r.parts.includes('FO.BLACK_BIRD_FIELD'));
+      return { bbInSolo, bbInReloParts, soloSet: [...soloSet] };
+    });
+
+    // Black Bird in solo iff it's in a RelO participant set with Cain
+    expect(corpseCheck.bbInSolo).toBe(corpseCheck.bbInReloParts);
+
+    // For Huginn: Black Bird should NOT be in solo if not directly in shared RelO
+    const huginnCheck = await page.evaluate(() => {
+      const soloSet = computeSoloSet('FO.HUGINN');
+      const bbInSolo = soloSet.has('FO.BLACK_BIRD_FIELD');
+      const huginnRelos = Object.entries(DATA.relations)
+        .filter(([,parts]) => parts.includes('FO.HUGINN'))
+        .map(([rid,parts]) => ({ rid, parts }));
+      const bbInReloParts = huginnRelos.some(r => r.parts.includes('FO.BLACK_BIRD_FIELD'));
+      return { bbInSolo, bbInReloParts };
+    });
+    expect(huginnCheck.bbInSolo).toBe(huginnCheck.bbInReloParts);
   });
 });

@@ -2,6 +2,48 @@
 
 This file is the canonical project log. Keep it in the repository root. Update it after every Claude Code round.
 
+## 2026-06-26 — Phase 2B: Mobile Field solo and Index behavior
+
+Branch: `claude/mobile-field-solo-index`
+Base file: `index.html`
+
+Goal: Fix mobile graph interaction contract, solo behavior, Index flow, route-line state logic, and duplicate mobile controls.
+
+Decisions:
+
+- **Mobile node tap → Field select (not Read)**: Introduced `selectInField(id)` function. Mobile graph node tap now calls this instead of `focusObject`. Updates `S.activeId`, sets `phase=focused`, keeps `surface=field`, applies local aperture, fits focus frame, registers route event. User stays in graph. Bottom Read button then opens the selected object.
+
+- **Solo computation via RelO participation**: Replaced adjacency-based `new Set([id,...adj[id]])` with `computeSoloSet(id)`. New algorithm: find all RelOs whose participant arrays contain `id`, add them to solo set, then add all their participants. Black Bird appears in solo only when it's a participant in one of the target object's RelOs — not forced into every solo.
+
+- **Index `solo` → Field solo (not Reader)**: Updated `[data-solo]` handler in `renderObjectRows` to: set `S.soloSet` from `computeSoloSet`, set `S.activeId`, set `phase=focused`, set `surface=field`, call `updatePhaseClass`, close drawers, register route event, set reader open on mobile (for surface CSS to work correctly), apply focus lighting, fit field. Does NOT render reader, does NOT switch surface to read.
+
+- **Show All clears solo and returns to overview**: Updated to call `closeAllDrawers()` and `returnToField()` after clearing visibility and soloSet. Previously only updated visibility in-place.
+
+- **Restore Field clears solo and returns to overview**: Same as above — now calls `returnToField` after restoring defaults.
+
+- **Inline links in Read stay in Read on mobile**: Changed `inlineHandlers` click handler to explicitly pass `openReader:true` when `isMobile() && S.surface==='read'`. This keeps user in Read when following links inside the reader panel.
+
+- **Route lines conditioned by solo state**: In `routeSegments()`, added a check: when `S.soloSet` is active, skip any route segment where either endpoint is not in the solo set. This prevents long diagonal artifacts from pre-solo route history crossing the filtered graph.
+
+- **updateVisibility redraws route memory**: Added `drawRouteMemory({duration:0})` call inside `updateVisibility()` so route segments are immediately recalculated whenever solo state or visibility changes.
+
+- **Top mobile controls hidden**: Added `.map-tools{display:none!important;}` inside the `@media (max-width:860px)` block. The top Field and View buttons were duplicating bottom nav. Desktop rail and top tools unaffected.
+
+- **Tests updated and added**: Tests 7, 9, 11 updated to reflect new mobile node tap → Field (not Read) contract. Tests 22–26 added covering: solo computation correctness, Index solo → Field, mobile top controls hidden, route lines in solo, Black Bird conditional in solo.
+
+Files changed:
+- `index.html` — `selectInField` function, `computeSoloSet` function, updated `[data-solo]` handler, updated Show All, Restore Field, inline link handlers, route segment solo filter, `updateVisibility` calls `drawRouteMemory`, mobile CSS hides `.map-tools`
+- `tests/black-bird-smoke.spec.js` — tests 7/9/11 updated; tests 22–26 added
+- `BLACK_BIRD_DECISIONS_CHANGELOG.md` — this entry
+
+Commands run:
+- `npm run test:data` — PASS (50 nodes)
+- `npm test` — PASS (26/26)
+
+Known risks:
+- `selectInField` uses `setReaderOpen(true)` to ensure mobile layout CSS is applied correctly (surface-field hides .panel when reader-open class is present via CSS). This is slightly counter-intuitive but required by the CSS rules from Phase 1.
+- `returnToField` called from Show All and Restore Field will clear `S.activeId` — this is correct for returning to overview state.
+
 ## 2026-06-26 — Phase 2A: Entry and MNO Reader integrity
 
 Base file: `index.html`
