@@ -134,6 +134,8 @@ button,input{font:inherit}
 .phase-threshold .reader,.phase-onboarding .reader{display:none;}
 
 @media (max-width:860px){
+  /* Top map-tools Field/View buttons are duplicated by bottom-nav; hide them on mobile */
+  .map-tools{display:none!important;}
   .app-frame{display:block;padding-bottom:56px;}
   .rail{display:none}
   .main{display:flex;flex-direction:column;height:calc(100dvh - 56px);}
@@ -298,6 +300,9 @@ let S = {
   readerOpen:false, onboardingActive:false, cameraInFlight:false,
   previewTarget:null, previewTimer:null, showSheet:false, indexFilter:'all'
 };
+
+// Expose state for testing (S is let, not on window automatically)
+window.__bbState = S;
 
 // ── Helpers ────────────────────────────────────────────────────────────────
 function prefersReducedMotion(){return window.matchMedia('(prefers-reduced-motion:reduce)').matches;}
@@ -489,7 +494,7 @@ nodeSel.attr('tabindex',0).attr('role','button').attr('aria-label',d=>`${d.type}
   .on('click',(ev,d)=>{
     ev.stopPropagation(); hidePreview();
     if(S.onboardingActive){S.onboardingActive=false;hideFieldPrompt();return focusObject(d.id,{source:'onboarding-interrupt'});}
-    if(isMobile()) return focusObject(d.id,{source:'graph-mobile'});
+    if(isMobile()) return selectInField(d.id,{source:'graph-mobile'});
     focusObject(d.id,{source:'graph'});
   })
   .on('keydown',(ev,d)=>{
@@ -560,6 +565,7 @@ function updateVisibility(){
   if(!S.activeId) transitionToFieldLighting({duration:0});
   else transitionFieldLight(buildFocusSet(S.activeId),{duration:0});
   updateLabelVisibility();
+  drawRouteMemory({duration:0});
 }
 
 // ── Camera ─────────────────────────────────────────────────────────────────
@@ -733,6 +739,8 @@ function routeSegments(){
   for(let i=1;i<events.length;i++){
     const a=events[i-1],b=events[i];
     if(!byId[a.id]||!byId[b.id]||!nodeVisible(a.id)||!nodeVisible(b.id)) continue;
+    // In solo state: only draw segments where both endpoints are in the solo set
+    if(S.soloSet&&(!S.soloSet.has(a.id)||!S.soloSet.has(b.id))) continue;
     segs.push({key:`${a.index}-${b.index}`,source:byId[a.id],target:byId[b.id],age:events.length-1-i});
   }
   return segs.slice(-S.maxVisibleRouteSegments);
@@ -752,6 +760,19 @@ function drawRouteMemory(opts={}){
       d3.select(this).attr('x1',x1).attr('y1',y1).attr('x2',x2).attr('y2',y2);
   }).transition().duration(prefersReducedMotion()?0:dur)
     .attr('stroke-opacity',d=>Math.max(0.06,0.42-d.age*0.055));
+}
+
+// ── Solo computation ───────────────────────────────────────────────────────
+function computeSoloSet(id){
+  // Solo = object + its RelOs + all participants in those RelOs
+  const relationIds=relosFor(id);
+  const soloIds=new Set([id]);
+  for(const rid of relationIds){
+    soloIds.add(rid);
+    const parts=DATA.relations[rid]||[];
+    for(const pid of parts) if(byId[pid]) soloIds.add(pid);
+  }
+  return soloIds;
 }
 
 // ── Focus set ──────────────────────────────────────────────────────────────
@@ -809,6 +830,25 @@ async function returnToField(opts={}){
   fitVisibleField({duration:opts.duration??850});
 }
 function deselectAll(){returnToField();}
+
+// Mobile: select/focus in Field without opening Read
+async function selectInField(id,opts={}){
+  const n=byId[id]; if(!n) return;
+  const source=opts.source||'mobile-field';
+  const previousId=S.activeId;
+  S.phase='focused'; S.surface='field';
+  updatePhaseClass();
+  S.activeId=id; S.activeEdge=null; S.activeRelos=[]; S.previewTarget=null;
+  closeAllDrawers(); hidePreview();
+  registerRouteEvent(id,{from:previousId,source});
+  await setReaderOpen(true,{measure:true});
+  const focus=buildFocusSet(id);
+  applyLocalAperture(focus);
+  transitionFieldLight(focus,{duration:opts.lightDuration??420});
+  fitFocusFrame(focus,{duration:opts.cameraDuration??680});
+  drawRouteMemory({duration:opts.routeDuration??420});
+  updateRouteLiveRegion();
+}
 
 // ── Micro-preview ──────────────────────────────────────────────────────────
 function graphPointToScreen(x,y){
@@ -974,7 +1014,7 @@ function inlineHandlers(root=document){
     el.addEventListener('mouseleave',()=>{if(!isMobile()) clearTouch();});
     el.addEventListener('click',ev=>{
       ev.stopPropagation();
-      if(isMobile()) return focusObject(el.dataset.id,{source:'text-link-mobile'});
+      if(isMobile()&&S.surface==='read') return focusObject(el.dataset.id,{source:'text-link-mobile',openReader:true});
       focusObject(el.dataset.id,{source:'text-link'});
     });
   });
@@ -1039,7 +1079,23 @@ function renderObjectRows(container,filter='',typeFilter=null){
   container.innerHTML=rows;
   container.querySelectorAll('[data-open]').forEach(el=>el.onclick=()=>{focusObject(el.dataset.open,{source:'object-drawer'});closeAllDrawers();});
   container.querySelectorAll('[data-eye]').forEach(el=>el.onclick=()=>{const id=el.dataset.eye;S.objectVisibility[id]=S.objectVisibility[id]===false;renderFieldViewControls();updateVisibility();});
-  container.querySelectorAll('[data-solo]').forEach(el=>el.onclick=()=>{const id=el.dataset.solo;S.soloSet=new Set([id,...(adj[id]||[])]);updateVisibility();closeAllDrawers();fitVisibleField();});
+  container.querySelectorAll('[data-solo]').forEach(el=>el.onclick=async()=>{
+    const id=el.dataset.solo;
+    const previousId=S.activeId;
+    S.soloSet=computeSoloSet(id);
+    S.activeId=id; S.phase='focused'; S.surface='field';
+    updatePhaseClass();
+    updateVisibility();
+    closeAllDrawers();
+    registerRouteEvent(id,{from:previousId,source:'index-solo'});
+    await nextFrame();
+    if(isMobile()) await setReaderOpen(true,{measure:true});
+    const focus=buildFocusSet(id);
+    applyLocalAperture(focus);
+    transitionFieldLight(focus,{duration:420});
+    fitVisibleField({duration:760});
+    drawRouteMemory({duration:420});
+  });
 }
 function renderObjectLists(){
   const objectList=document.getElementById('objectList');
@@ -1050,8 +1106,8 @@ function renderObjectLists(){
 }
 function openIndex(filter='all'){S.indexFilter=filter;const search=document.getElementById('objectSearch');if(search) search.value='';renderObjectLists();openDrawer('objectDrawer');}
 document.getElementById('objectSearch').oninput=renderObjectLists;
-document.getElementById('restoreField').onclick=()=>{S.objectVisibility={...defaultVisibility};S.soloSet=null;Object.keys(S.objectGroups).forEach(k=>S.objectGroups[k]=true);renderFieldViewControls();updateVisibility();fitVisibleField();};
-document.getElementById('showAllObjects').onclick=()=>{S.objectVisibility={...defaultVisibility};S.soloSet=null;renderObjectLists();updateVisibility();};
+document.getElementById('restoreField').onclick=()=>{S.objectVisibility={...defaultVisibility};S.soloSet=null;Object.keys(S.objectGroups).forEach(k=>S.objectGroups[k]=true);renderFieldViewControls();updateVisibility();closeAllDrawers();returnToField({source:'restore-field'});};
+document.getElementById('showAllObjects').onclick=()=>{S.objectVisibility={...defaultVisibility};S.soloSet=null;renderObjectLists();updateVisibility();closeAllDrawers();returnToField({source:'show-all'});};
 document.getElementById('clearRouteDrawer').onclick=()=>{S.routeEvents=[];renderRoute();drawRouteMemory({duration:260});};
 
 // ── Action bindings ─────────────────────────────────────────────────────────

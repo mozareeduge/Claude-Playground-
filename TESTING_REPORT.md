@@ -1,5 +1,43 @@
 # Testing Report — Black Bird
 
+## 2026-06-26 — Phase 2B: Mobile Field solo and Index behavior
+
+- `npm run test:data` → **PASS** — 50 nodes, 0 errors. Ontology unchanged.
+- `npm test` (Playwright) → **26/26 PASS** (6.9m)
+
+| Test | Status | Notes |
+|---|---|---|
+| 1. Desktop onboarding to Black Bird | PASS | |
+| 2. Desktop Field refit from multiple focuses | PASS | |
+| 3. Desktop dense area aperture evidence | PASS | |
+| 4. Mobile Field surface | PASS | |
+| 5. Mobile Read surface | PASS | |
+| 6. Mobile onboarding ends in Field overview | PASS | |
+| 7. Mobile node tap selects object in Field (not Read) | PASS | Updated: tap stays in surface-field |
+| 8. Mobile Read fallback opens Black Bird when no object is active | PASS | |
+| 9. Mobile inline link navigates within Read | PASS | Updated: taps Read button first, then tests inline links |
+| 10. Mobile related object navigates within Read | PASS | |
+| 11. Mobile Field tap selects object; Read button opens it | PASS | Updated: tap→Field; Read→same object in Read |
+| 12. No console NaN errors on mobile | PASS | |
+| 13. No SVG line attributes receive NaN | PASS | |
+| 14. No phantom edges drawn to origin (0,0) | PASS | |
+| 15. Entry subtitle is correct (no SPECULATIVE) | PASS | |
+| 16. Mobile entry threshold — subtitle correct and button centered | PASS | |
+| 17. MNO Black Ring — linked spans remain inline (desktop) | PASS | |
+| 18. MNO Black Ring — linked spans remain inline (mobile) | PASS | |
+| 19. MNO Window — linked spans remain inline (desktop) | PASS | |
+| 20. MNO Window — linked spans remain inline (mobile) | PASS | |
+| 21. Reader transition — no stale content from previous object | PASS | |
+| 22. Solo computed from RelO participants (not adjacency) | PASS | New: RelO participation logic verified |
+| 23. Index solo enters Field with solo graph (not Reader) | PASS | New: solo → surface-field, activeId=FO.CORPSE |
+| 24. Mobile top Field/View buttons hidden; bottom nav visible | PASS | New: .map-tools display:none on mobile |
+| 25. Route lines in solo exclude out-of-solo segments | PASS | New: segments filter to soloSet |
+| 26. Black Bird appears in solo only when part of relation set | PASS | New: conditional BB in solo verified |
+
+Screenshots updated in `test-results/black-bird-smoke/`.
+
+---
+
 ## 2026-06-25 — Verification tightening (Phase 1 follow-up)
 
 - `npm run test:data` → **PASS** — 50 nodes, 0 errors. Data ontology unchanged.
