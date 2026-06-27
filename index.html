@@ -34,7 +34,7 @@ button,input{font:inherit}
 .map-title{position:absolute;left:24px;top:22px;z-index:5;pointer-events:none;}
 .map-title h1{font-family:var(--mono);font-size:15px;font-weight:400;letter-spacing:.32em;margin:0 0 6px;color:var(--text);}
 .map-title div{font-family:var(--mono);font-size:10px;letter-spacing:.2em;color:var(--muted);}
-.map-tools{position:absolute;right:18px;top:18px;display:flex;gap:8px;z-index:8}
+.map-tools{position:absolute;right:18px;top:18px;display:none;gap:8px;z-index:8}
 .tool-btn{border:1px solid var(--line2);background:rgba(13,12,11,.82);color:var(--text2);height:36px;min-width:36px;padding:0 10px;font-family:var(--mono);font-size:10px;letter-spacing:.08em;cursor:pointer;}
 .tool-btn:hover{color:var(--text);border-color:#5a5045;background:#151310}
 #graphSvg{position:absolute;inset:0;width:100%;height:100%;touch-action:none;cursor:grab;overflow:hidden;}
@@ -102,7 +102,7 @@ button,input{font:inherit}
 .icon-small:hover{color:var(--text);border-color:#65594c}
 .threshold{position:absolute;inset:0;background:radial-gradient(circle at center,#0d0c0b 0%,#070706 62%,#050505 100%);z-index:60;display:flex;align-items:center;justify-content:center;padding:28px;opacity:1;transition:opacity 520ms ease;}
 .threshold.leaving{opacity:0;pointer-events:none;}
-.threshold-card{width:min(800px,90vw);border:1px solid var(--line2);padding:64px 60px 56px;background:rgba(8,7,7,.72);box-shadow:var(--shadow);display:flex;flex-direction:column;align-items:flex-start;}
+.threshold-card{width:min(800px,90vw);border:1px solid var(--line2);padding:64px 60px 56px;background:rgba(8,7,7,.72);box-shadow:var(--shadow);display:flex;flex-direction:column;align-items:flex-start;opacity:0;transition:opacity 360ms ease;}
 .threshold h1{font-family:var(--mono);font-weight:400;font-size:42px;letter-spacing:.36em;margin:0 0 24px;color:var(--text);line-height:1.18}
 .threshold .sub{font-family:var(--mono);font-size:13px;letter-spacing:.22em;color:var(--text2);margin-bottom:38px}
 .threshold .author{font-family:var(--mono);font-size:13px;letter-spacing:.16em;color:var(--muted);margin-bottom:64px}
@@ -1189,7 +1189,8 @@ async function finishOnboarding(){
   const focus=buildFocusSet(id);
   applyLocalAperture(focus);
   transitionFieldLight(focus,{duration:prefersReducedMotion()?0:520});
-  fitFocusFrame(focus,{duration:prefersReducedMotion()?0:780});
+  // Mobile only: fit now (map stays full-width). Desktop: skip early fit — reader opens first, map dimensions change, then focusObject fits once on stable dimensions.
+  if(isMobile()) fitFocusFrame(focus,{duration:prefersReducedMotion()?0:780});
 
   await sleep(prefersReducedMotion()?0:420);
 
@@ -1199,6 +1200,7 @@ async function finishOnboarding(){
 
   if(!isMobile()){
     await setReaderOpen(true,{waitTransition:true,transitionMs:680,measure:true});
+    await nextFrame();
   }
 
   await focusObject(id,{
@@ -1220,6 +1222,15 @@ async function enter(opts={}){
   startTacitOnboarding();
 }
 document.querySelectorAll('[data-enter]').forEach(b=>b.onclick=()=>enter());
+
+// ── Threshold font-ready gate ──────────────────────────────────────────────
+(function(){
+  const card=document.querySelector('.threshold-card');
+  if(!card) return;
+  const reveal=()=>{card.style.opacity='1';};
+  const t=setTimeout(reveal,1600);
+  (typeof document.fonts!=='undefined'?document.fonts.ready:Promise.resolve()).then(()=>{clearTimeout(t);reveal();}).catch(()=>{clearTimeout(t);reveal();});
+})();
 
 // ── Init ───────────────────────────────────────────────────────────────────
 renderFieldViewControls(); renderRoute(); updateVisibility(); reader(''); updatePhaseClass();
