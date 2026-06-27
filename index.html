@@ -809,7 +809,7 @@ async function focusObject(id,opts={}){
   const focus=buildFocusSet(id);
   applyLocalAperture(focus);
   transitionFieldLight(focus,{duration:opts.lightDuration??420});
-  if(!(isMobile()&&S.surface==='read')) fitFocusFrame(focus,{duration:opts.cameraDuration??760});
+  if(!(isMobile()&&S.surface==='read') && opts.camera!==false) fitFocusFrame(focus,{duration:opts.cameraDuration??760});
   const readerEl=document.getElementById('reader');
   if(readerEl){readerEl.innerHTML='';readerEl.scrollTop=0;}
   if(opts.readerDelay!==false) setTimeout(()=>renderNodePanel(id),prefersReducedMotion()?0:(opts.readerDelay??160));
@@ -1206,10 +1206,13 @@ async function finishOnboarding(){
   await focusObject(id,{
     source:'onboarding',
     openReader:!isMobile(),
+    camera:isMobile()?undefined:false,
     cameraDuration:prefersReducedMotion()?0:680,
     lightDuration:prefersReducedMotion()?0:180,
     readerDelay:0
   });
+  // Desktop only: land as composed field (not focus-frame dive). fitVisibleField centers the full constellation in the split pane after the reader is stable.
+  if(!isMobile()) fitVisibleField({duration:prefersReducedMotion()?0:680});
 }
 
 // ── Entry ──────────────────────────────────────────────────────────────────

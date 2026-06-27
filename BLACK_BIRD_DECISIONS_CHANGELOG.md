@@ -2,6 +2,37 @@
 
 This file is the canonical project log. Keep it in the repository root. Update it after every Claude Code round.
 
+## 2026-06-27 — Repair desktop Black Bird landing camera after onboarding
+
+Branch: `claude/desktop-landing-camera-repair`
+Base file: `index.html`
+
+### Problem
+
+After PR #10, desktop onboarding no longer had a premature `fitFocusFrame` before the reader opened. But `finishOnboarding()` still ended by calling `focusObject()`, which unconditionally called `fitFocusFrame()` on desktop. `fitFocusFrame` computed bounds for the Black Bird focus set (Black Bird + close neighbors) and placed it at `getFocusBiasY()=0.56` (below center) with a zoom of 0.72–1.35x. After the reader panel had already opened and layout was stable, this produced a camera dive from overview into a lower-left zoomed composition — visible to the user as an abrupt jump after the reader appeared.
+
+### Root cause
+
+`focusObject()` line 812: `if(!(isMobile()&&S.surface==='read')) fitFocusFrame(...)`. No way to suppress this for the initial desktop landing without breaking later node focus behavior.
+
+### Fix
+
+Two-line change (one line modified, two lines added):
+
+1. Added `opts.camera!==false` guard to the `fitFocusFrame` call in `focusObject()`. When `camera:false` is passed, the focus-frame camera is skipped; everything else (activeId, route, aperture, lighting, reader render) proceeds normally. All existing callers pass no `camera` option, so `opts.camera` is `undefined` → `undefined!==false` → `fitFocusFrame` fires as before. No existing behavior changed.
+
+2. In `finishOnboarding()`: added `camera:isMobile()?undefined:false` to the `focusObject` options. On desktop, `camera:false` suppresses `fitFocusFrame`. On mobile, `camera:undefined` leaves existing behavior unchanged.
+
+3. Added `if(!isMobile()) fitVisibleField({duration:680})` after `focusObject` returns. This lands the desktop first view as a composed visible-field scene — the full constellation centered in the split pane with 88px padding — not a zoomed focus-cluster shot.
+
+Global `fitFocusFrame` behavior for later desktop node clicks is completely unchanged.
+
+Changed files: `index.html`, `BLACK_BIRD_DECISIONS_CHANGELOG.md`
+Commands run: `npm run test:data` (PASS, 50 nodes)
+Known risks: None. Mobile contract, later desktop focus, route logic, ontology, and prose are all unchanged.
+
+---
+
 ## 2026-06-27 — Desktop entry framing polish: threshold font gate, onboarding camera, duplicate controls
 
 Branch: `claude/desktop-entry-framing-polish-azsjpe`
