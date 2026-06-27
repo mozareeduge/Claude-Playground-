@@ -2,6 +2,35 @@
 
 This file is the canonical project log. Keep it in the repository root. Update it after every Claude Code round.
 
+## 2026-06-27 — Desktop entry framing polish: threshold font gate, onboarding camera, duplicate controls
+
+Branch: `claude/desktop-entry-framing-polish-azsjpe`
+Base file: `index.html`
+
+### Problem 1: Threshold font flash (FOUT)
+
+The `.threshold-card` rendered immediately at `opacity:1` while Google Fonts (IBM Plex Mono, Crimson Pro) loaded asynchronously with `display=swap`. This caused visible fallback typography on cold load before the final font settled.
+
+Fix: Added `opacity:0; transition:opacity 360ms ease` to `.threshold-card` CSS. Added a IIFE JS font-ready gate using `document.fonts.ready` with a 1600ms fallback `setTimeout`. The card reveals (`opacity:1`) when fonts are ready or at timeout, whichever comes first. `prefers-reduced-motion` CSS rule (`transition:none!important`) suppresses the fade; opacity still resolves to 1.
+
+### Problem 2: Desktop onboarding camera jump and bad Black Bird framing
+
+`finishOnboarding()` called `fitFocusFrame()` while the map was still full-width, then immediately called `setReaderOpen(true)` (which shrank the map to ~58vw over 680ms), then called `focusObject()` which triggered a second `fitFocusFrame()` on the new split-pane dimensions. The result: two competing camera fits with changing layout metrics, producing an abrupt jump and Black Bird landing near the lower-left edge.
+
+Fix: On desktop, skip the early `fitFocusFrame` call in `finishOnboarding()` (guarded with `if(isMobile())`). Open the reader panel first (`setReaderOpen` with `waitTransition:true`), add one `await nextFrame()` for layout to settle, then let the single `focusObject` call at the end perform the final camera fit on stable split-pane dimensions. Mobile path unchanged.
+
+### Problem 3: Duplicate Field/View buttons on desktop
+
+`.map-tools` (containing `#fieldBtn` / `data-action="view"`) was `display:flex` in the base CSS rule, visible on desktop during field and focused phases. The left rail already provides FIELD/VIEW/INDEX/SRC. Two identical controls were visible simultaneously on desktop.
+
+Fix: Changed `.map-tools` base rule from `display:flex` to `display:none`. `#fieldBtn` remains in DOM (its `onclick` listener at line 1147 is unaffected). The mobile media query (`display:none!important`) is now redundant but harmless. The left rail is unchanged.
+
+Changed files: `index.html`, `BLACK_BIRD_DECISIONS_CHANGELOG.md`
+Commands run: `npm run test:data` (PASS, 50 nodes), Playwright (pre-existing browser version mismatch in env — 29 failures on both main and branch; not caused by these changes)
+Known risks: None. Mobile contract, route logic, ontology, and prose are all unchanged.
+
+---
+
 ## 2026-06-26 — Visual polish: mobile solo framing + reader bottom padding
 
 Branch: `claude/mobile-solo-reader-polish`
