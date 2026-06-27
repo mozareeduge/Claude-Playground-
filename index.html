@@ -1192,37 +1192,37 @@ async function finishOnboarding(){
   await sleep(prefersReducedMotion()?0:260);
 
   const id='FO.BLACK_BIRD_FIELD';
-  S.activeId=id;
-  const focus=buildFocusSet(id);
-  applyLocalAperture(focus);
-  transitionFieldLight(focus,{duration:prefersReducedMotion()?0:520});
-  // Mobile only: fit now (map stays full-width). Desktop: skip early fit — reader opens first, map dimensions change, then focusObject fits once on stable dimensions.
-  if(isMobile()) fitFocusFrame(focus,{duration:prefersReducedMotion()?0:780});
 
-  await sleep(prefersReducedMotion()?0:420);
-
-  S.phase='focused';
-  S.surface='field';
-  updatePhaseClass();
-
-  if(!isMobile()){
-    await setReaderOpen(true,{waitTransition:true,transitionMs:680,measure:true});
-    await nextFrame();
-    beginGraphHandoff();
-    await nextFrame(); measureGraph(); await nextFrame();
-    fitVisibleField({duration:0});
-    endGraphHandoff();
-    await nextFrame();
+  if(isMobile()){
+    // Mobile: animate aperture/light/camera on full-width map, then commit focus.
+    S.activeId=id;
+    const focus=buildFocusSet(id);
+    applyLocalAperture(focus);
+    transitionFieldLight(focus,{duration:prefersReducedMotion()?0:520});
+    fitFocusFrame(focus,{duration:prefersReducedMotion()?0:780});
+    await sleep(prefersReducedMotion()?0:420);
+    S.phase='focused'; S.surface='field'; updatePhaseClass();
+    await focusObject(id,{source:'onboarding',openReader:false,cameraDuration:prefersReducedMotion()?0:680,lightDuration:prefersReducedMotion()?0:180,readerDelay:0});
+    return;
   }
 
-  await focusObject(id,{
-    source:'onboarding',
-    openReader:!isMobile(),
-    camera:isMobile()?undefined:false,
-    cameraDuration:prefersReducedMotion()?0:680,
-    lightDuration:prefersReducedMotion()?0:180,
-    readerDelay:0
-  });
+  // Desktop: mask before reader opens so the split-pane resize and all focus/aperture/camera
+  // work is invisible; reveal once the complete final state is applied.
+  S.phase='focused'; S.surface='field'; updatePhaseClass();
+  beginGraphHandoff();
+  await setReaderOpen(true,{waitTransition:true,transitionMs:680,measure:true});
+  await nextFrame();
+  measureGraph();
+  await nextFrame();
+  // All focus effects (aperture, lighting, route, reader) run under the mask at duration:0.
+  await focusObject(id,{source:'onboarding',openReader:true,camera:false,cameraDuration:0,lightDuration:0,routeDuration:0,readerDelay:0});
+  // Wait for readerDelay:0 setTimeout to fire, then re-measure and place camera.
+  await nextFrame();
+  measureGraph();
+  await nextFrame();
+  fitVisibleField({duration:0});
+  await nextFrame();
+  endGraphHandoff();
 }
 
 // ── Entry ──────────────────────────────────────────────────────────────────

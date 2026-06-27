@@ -2,6 +2,62 @@
 
 This file is the canonical project log. Keep it in the repository root. Update it after every Claude Code round.
 
+## 2026-06-27 — Final desktop onboarding handoff sequence (PR #13)
+
+Branch: `claude/final-desktop-handoff-sequence`
+Base file: `index.html`
+
+### Problem
+
+After PR #12, the desktop `finishOnboarding()` flow still showed three visible graph states:
+1. Full-width onboarding field (all nodes, no aperture, no focus) — correct
+2. Reader/split layout opens; graph recomposed once — **visible unfocused graph in split pane**
+3. Black Bird focus/aperture applied after reveal — **second visible recomposition**
+
+Root cause: in PR #12, `endGraphHandoff()` fired AFTER `setReaderOpen` and `fitVisibleField`, but BEFORE `focusObject`. So all of focusObject's side-effects — aperture, lighting, route memory, reader render — happened after the graph was revealed, producing visible state 3. Additionally, `beginGraphHandoff()` was called AFTER `setReaderOpen(680ms)`, leaving the graph visible in its unfocused state during the 680ms reader-opening animation (state 2).
+
+### Decision
+
+Restructure desktop `finishOnboarding()` to:
+1. Call `beginGraphHandoff()` BEFORE `setReaderOpen()` — graph is masked before the reader-opening animation, so the split-pane resize and viewBox change are invisible.
+2. Call `focusObject()` under the mask with all durations at 0 (aperture, lighting, route, reader).
+3. After `focusObject()` returns, re-measure and place camera with `fitVisibleField({duration:0})`.
+4. Only then call `endGraphHandoff()` — graph fades in with complete final state already applied.
+
+Split the function into explicit mobile/desktop paths; mobile path is identical to its pre-PR-12 behavior.
+
+### Visual test results (Playwright frame inspection)
+
+**1920×920:**
+- Mask active before reader opens: both panes dark during 680ms reader transition
+- No unfocused graph state visible
+- Final state (Black Bird active, aperture, reader content) appears in one smooth 240ms fade
+- State stable for 1.5s+ — no movement after reveal
+- No aperture/focus visible after reveal
+
+**1440×900:**
+- Same pattern — single controlled handoff
+- Constellation sits slightly low (lower-center of left pane) — pre-existing characteristic of force simulation equilibrium position when recentered to split-pane dimensions; not introduced by this PR
+
+### Changed files
+
+- `index.html`
+- `BLACK_BIRD_DECISIONS_CHANGELOG.md`
+
+### Commands run
+
+- `npm run test:data` → PASS (50 nodes)
+- Playwright frame capture at 1920×920 (20 frames at 200ms intervals)
+- Playwright frame capture at 1440×900 (10 frames at 250ms intervals)
+
+### Known risks
+
+- The graph is masked during the full reader-opening animation (680ms). Users see a dark left pane while the reader slides in. Per the task spec, "graph may briefly fade/soften or be hidden during the handoff" — this is acceptable.
+- At smaller viewports (1440×900), the constellation sits slightly below center. This is the force simulation's natural equilibrium after split-pane recentering, not a bug in the handoff sequence. If the user requests vertical centering improvement, that is a separate concern.
+- Mobile path is unchanged.
+
+---
+
 ## 2026-06-27 — Final entry/surface handoff repair (PR #12)
 
 Branch: `claude/final-entry-surface-handoff`
