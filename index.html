@@ -570,8 +570,32 @@ function updateVisibility(){
 
 // ── Camera ─────────────────────────────────────────────────────────────────
 function setCamera(t){svg.interrupt();zoom.transform(svg,t);S.cameraInFlight=false;}
-function beginGraphHandoff(){const e=svg.node();e.style.opacity='0';e.style.transition='none';}
-function endGraphHandoff(){const e=svg.node();if(prefersReducedMotion()){e.style.opacity='';e.style.transition='';return;}e.style.transition='opacity 240ms ease';requestAnimationFrame(()=>{e.style.opacity='';setTimeout(()=>{e.style.transition='';},260);});}
+async function beginGraphHandoff(opts={}){
+  const e=svg.node();
+  const fade=opts.fade===true&&!prefersReducedMotion();
+  svg.interrupt();
+  if(!fade){e.style.transition='none';e.style.opacity='0';await nextFrame();return;}
+  e.style.transition=`opacity ${opts.duration??180}ms ease`;
+  e.style.opacity='0';
+  await sleep((opts.duration??180)+40);
+  e.style.transition='none';
+}
+async function endGraphHandoff(opts={}){
+  const e=svg.node();
+  const fade=opts.fade===true&&!prefersReducedMotion();
+  if(!fade){
+    if(prefersReducedMotion()){e.style.opacity='';e.style.transition='';}
+    else{e.style.transition='opacity 240ms ease';requestAnimationFrame(()=>{e.style.opacity='';setTimeout(()=>{e.style.transition='';},260);});}
+    await nextFrame();
+    return;
+  }
+  e.style.opacity='0';
+  e.style.transition=`opacity ${opts.duration??260}ms ease`;
+  await nextFrame();
+  e.style.opacity='';
+  await sleep((opts.duration??260)+40);
+  e.style.transition='';
+}
 function animateCamera(transform,opts={}){
   const dur=prefersReducedMotion()?0:(opts.duration??760);
   S.cameraInFlight=true;
@@ -1206,10 +1230,10 @@ async function finishOnboarding(){
     return;
   }
 
-  // Desktop: mask before reader opens so the split-pane resize and all focus/aperture/camera
-  // work is invisible; reveal once the complete final state is applied.
+  // Desktop: fade graph out, open reader and apply all focus/aperture/camera under the mask,
+  // then fade graph back in once the complete final Black Bird state is ready.
   S.phase='focused'; S.surface='field'; updatePhaseClass();
-  beginGraphHandoff();
+  await beginGraphHandoff({fade:true,duration:180});
   await setReaderOpen(true,{waitTransition:true,transitionMs:680,measure:true});
   await nextFrame();
   measureGraph();
@@ -1222,7 +1246,7 @@ async function finishOnboarding(){
   await nextFrame();
   fitVisibleField({duration:0});
   await nextFrame();
-  endGraphHandoff();
+  await endGraphHandoff({fade:true,duration:260});
 }
 
 // ── Entry ──────────────────────────────────────────────────────────────────

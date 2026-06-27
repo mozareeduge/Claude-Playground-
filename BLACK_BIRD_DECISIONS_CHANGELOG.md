@@ -2,6 +2,46 @@
 
 This file is the canonical project log. Keep it in the repository root. Update it after every Claude Code round.
 
+## 2026-06-27 — Desktop handoff dissolve polish (PR #14)
+
+Branch: `claude/desktop-handoff-dissolve`
+Base file: `index.html`
+
+### Problem
+
+PR #13 masked all visible state jumps during desktop `finishOnboarding()`, but the graph transition was still a hard instantaneous blackout (opacity 0 instantly applied). No easing or dissolve.
+
+### Decision
+
+Make `beginGraphHandoff` and `endGraphHandoff` async and add opt-in fade support via `{fade:true, duration:N}`:
+
+- `beginGraphHandoff({fade:true,duration:180})` — CSS `opacity` transition to 0 over 180ms, then resolves.
+- `endGraphHandoff({fade:true,duration:260})` — sets opacity:0, sets transition, waits one frame, clears opacity (triggers fade-in to natural state), waits for transition to complete.
+- `prefersReducedMotion()` guard: both functions skip CSS transitions when reduced motion is active.
+- All existing callers (mobile Field nav, `startTacitOnboarding`, `enter`) pass no opts — instant behavior preserved.
+- Only `finishOnboarding()` desktop path uses `{fade:true}`.
+
+### Changed files
+
+- `index.html`: `beginGraphHandoff`, `endGraphHandoff`, desktop `finishOnboarding()` path
+
+### Commands run
+
+- Playwright frame inspection at 1920×920 and 1440×900
+- Data integrity check: 50 nodes, no console errors
+
+### Visual test results
+
+**1920×920**: f03 (t≈600ms) graph partially faded (dissolve visible), f04 fully masked, f05 reader+graph both dark under mask, f06 final focused state with aperture and reader. No hard cut.
+
+**1440×900**: Settled final state — `phase-focused surface-field`, Black Bird active, split-pane, aperture applied, SVG opacity cleared. No errors.
+
+### Known risks
+
+- CSS transition timing depends on the browser compositing `opacity:''` as a from-0 start. Works correctly in Playwright Chromium 1194. May degrade gracefully in very old browsers (falls back to instant if `prefersReducedMotion()` returns true or if `fade` opt is not set).
+
+---
+
 ## 2026-06-27 — Final desktop onboarding handoff sequence (PR #13)
 
 Branch: `claude/final-desktop-handoff-sequence`
