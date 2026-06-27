@@ -2,6 +2,40 @@
 
 This file is the canonical project log. Keep it in the repository root. Update it after every Claude Code round.
 
+## 2026-06-27 — Final entry/surface handoff repair (PR #12)
+
+Branch: `claude/final-entry-surface-handoff`
+Base file: `index.html`
+
+### Problems
+
+1. Desktop first-focus still animated/jumpy after reader pane opens during onboarding handoff.
+2. Mobile threshold exit shows graph bleeding through fading threshold card.
+3. Mobile Read→Field nav reveals graph before camera has settled on active object.
+4. Mobile focused-field active object can land too close to edges/cropped.
+5. Mobile bottom nav overlaps system home indicator on phones with safe areas.
+
+### Decision
+
+Introduce a graph-handoff opacity mask (`beginGraphHandoff` / `endGraphHandoff`) that hides the SVG before any surface transition that repositions the camera, then fades it in once the camera is already positioned. Use `setCamera()` (immediate `zoom.transform`) instead of animated `animateCamera()` during handoff setup so no pan/zoom motion is ever visible. Add `padX`/`padY` opts to `fitFocusFrame` for the Read→Field path to ensure active node lands with comfortable clearance.
+
+For mobile safe area: extend all `calc(100dvh - 56px)` and `padding-bottom:56px` values with `env(safe-area-inset-bottom,0px)` in `@media(max-width:860px)`.
+
+### Changed files
+
+- `index.html`
+- `BLACK_BIRD_DECISIONS_CHANGELOG.md`
+
+### Commands run
+
+- `npm run test:data` → PASS (50 nodes)
+
+### Known risks
+
+- `beginGraphHandoff` hides the SVG synchronously; if `endGraphHandoff` is somehow not called (e.g. an early return in a branch), the graph stays invisible. All call sites are audited. `prefers-reduced-motion` skips the fade and removes opacity immediately.
+- `setCamera` uses `zoom.transform(svg, t)` which fires the zoom event synchronously and updates `S.transform`; this is correct.
+- Mobile safe-area env() falls back to 0px on non-notch devices — no layout change there.
+
 ## 2026-06-27 — Repair desktop Black Bird landing camera after onboarding
 
 Branch: `claude/desktop-landing-camera-repair`
