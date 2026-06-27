@@ -136,11 +136,11 @@ button,input{font:inherit}
 @media (max-width:860px){
   /* Top map-tools Field/View buttons are duplicated by bottom-nav; hide them on mobile */
   .map-tools{display:none!important;}
-  .app-frame{display:block;padding-bottom:56px;}
+  .app-frame{display:block;padding-bottom:calc(56px + env(safe-area-inset-bottom,0px));}
   .rail{display:none}
-  .main{display:flex;flex-direction:column;height:calc(100dvh - 56px);}
+  .main{display:flex;flex-direction:column;height:calc(100dvh - 56px - env(safe-area-inset-bottom,0px));}
   .main.reader-open{grid-template-columns:unset;}
-  .main:not(.reader-open) .map-wrap{height:calc(100dvh - 56px);flex:1 1 auto;border-right:0;border-bottom:0;}
+  .main:not(.reader-open) .map-wrap{height:calc(100dvh - 56px - env(safe-area-inset-bottom,0px));flex:1 1 auto;border-right:0;border-bottom:0;}
   .main:not(.reader-open) .panel{display:none;}
   .main.reader-open .map-wrap{height:38dvh;min-height:230px;border-right:0;border-bottom:1px solid var(--line);flex:0 0 auto;}
   .main.reader-open .panel{display:flex;opacity:1;pointer-events:auto;transform:none;flex:1;min-height:0;}
@@ -157,7 +157,7 @@ button,input{font:inherit}
   .drawer.open{transform:translateX(0);visibility:visible;pointer-events:auto;transition:transform .28s cubic-bezier(.22,.8,.36,1),visibility 0s;}
   .drawer-foot{position:sticky;bottom:0;background:#0b0a09}
   .drawer-backdrop{display:none!important}
-  .bottom-nav{display:grid;grid-template-columns:repeat(4,1fr);position:absolute;left:0;right:0;bottom:0;height:56px;background:#0b0a09;border-top:1px solid var(--line2);z-index:45;}
+  .bottom-nav{display:grid;grid-template-columns:repeat(4,1fr);position:absolute;left:0;right:0;bottom:0;height:calc(56px + env(safe-area-inset-bottom,0px));padding-bottom:env(safe-area-inset-bottom,0px);background:#0b0a09;border-top:1px solid var(--line2);z-index:45;}
   .bottom-nav button{border:0;border-right:1px solid #1e1b17;background:transparent;color:var(--text2);font-family:var(--mono);font-size:10px;letter-spacing:.08em;}
   .bottom-nav button:last-child{border-right:0}
   .bottom-nav button.active{color:var(--amber2)}
@@ -181,7 +181,7 @@ button,input{font:inherit}
 @media (max-width:860px){
   #app.surface-field.phase-focused .main.reader-open .map-wrap,
   #app.surface-field.phase-field .main.reader-open .map-wrap{
-    height:calc(100dvh - 56px);
+    height:calc(100dvh - 56px - env(safe-area-inset-bottom,0px));
     min-height:0;
     flex:1 1 auto;
     border-bottom:0;
@@ -202,7 +202,7 @@ button,input{font:inherit}
     transform:none;
     flex:1 1 auto;
     min-height:0;
-    height:calc(100dvh - 56px);
+    height:calc(100dvh - 56px - env(safe-area-inset-bottom,0px));
   }
   #app.surface-read .reader{
     padding-bottom:112px;
@@ -569,6 +569,9 @@ function updateVisibility(){
 }
 
 // ── Camera ─────────────────────────────────────────────────────────────────
+function setCamera(t){svg.interrupt();zoom.transform(svg,t);S.cameraInFlight=false;}
+function beginGraphHandoff(){const e=svg.node();e.style.opacity='0';e.style.transition='none';}
+function endGraphHandoff(){const e=svg.node();if(prefersReducedMotion()){e.style.opacity='';e.style.transition='';return;}e.style.transition='opacity 240ms ease';requestAnimationFrame(()=>{e.style.opacity='';setTimeout(()=>{e.style.transition='';},260);});}
 function animateCamera(transform,opts={}){
   const dur=prefersReducedMotion()?0:(opts.duration??760);
   S.cameraInFlight=true;
@@ -587,7 +590,7 @@ function fitFocusFrame(focus,opts={}){
   const visible=focus.ids.map(id=>byId[id]).filter(d=>d&&d.x!=null&&d.y!=null&&nodeVisible(d.id));
   if(!visible.length||width<10||height<10) return;
   const bounds=getNodeBounds(visible,isMobile()?42:56);
-  const padX=isMobile()?42:72,padY=isMobile()?44:72;
+  const padX=opts.padX??(isMobile()?42:72),padY=opts.padY??(isMobile()?44:72);
   const usableW=Math.max(1,width-padX*2),usableH=Math.max(1,height-padY*2);
   let k=Math.min(usableW/bounds.width,usableH/bounds.height);
   k=Math.max(isMobile()?0.62:0.72,Math.min(isMobile()?1.55:1.35,k));
@@ -1124,12 +1127,14 @@ document.querySelectorAll('[data-mobile]').forEach(b=>b.onclick=async()=>{
   if(a==='field'){
     if(isMobile()&&S.activeId){
       const fid=S.activeId;
+      beginGraphHandoff();
       S.surface='field'; updatePhaseClass();
       closeAllDrawers(); closeSheet(); hidePreview();
       await nextFrame(); measureGraph(); await nextFrame();
       const focus=buildFocusSet(fid);
       applyLocalAperture(focus);
-      fitFocusFrame(focus,{duration:680});
+      fitFocusFrame(focus,{duration:0,padX:56,padY:72});
+      endGraphHandoff();
     } else { returnToField({source:'mobile-nav'}); }
     return;
   }
@@ -1175,7 +1180,9 @@ async function startTacitOnboarding(){
   await setReaderOpen(false);
   reader('');
   transitionToFieldLighting({duration:0});
+  await nextFrame(); measureGraph(); await nextFrame();
   fitVisibleField({duration:0});
+  endGraphHandoff();
   await nextFrame();
   runOnboardingStage(0);
 }
@@ -1201,6 +1208,11 @@ async function finishOnboarding(){
   if(!isMobile()){
     await setReaderOpen(true,{waitTransition:true,transitionMs:680,measure:true});
     await nextFrame();
+    beginGraphHandoff();
+    await nextFrame(); measureGraph(); await nextFrame();
+    fitVisibleField({duration:0});
+    endGraphHandoff();
+    await nextFrame();
   }
 
   await focusObject(id,{
@@ -1211,17 +1223,26 @@ async function finishOnboarding(){
     lightDuration:prefersReducedMotion()?0:180,
     readerDelay:0
   });
-  // Desktop only: land as composed field (not focus-frame dive). fitVisibleField centers the full constellation in the split pane after the reader is stable.
-  if(!isMobile()) fitVisibleField({duration:prefersReducedMotion()?0:680});
 }
 
 // ── Entry ──────────────────────────────────────────────────────────────────
 async function enter(opts={}){
   const th=document.getElementById('threshold');
+  beginGraphHandoff();
   th.classList.add('leaving');
   await sleep(prefersReducedMotion()?0:520);
   th.style.display='none';
-  if(opts.skipOnboarding){S.phase='focused';S.surface='field';updatePhaseClass();if(!isMobile()){await setReaderOpen(true,{waitTransition:true,transitionMs:520,measure:true});}await focusObject('FO.BLACK_BIRD_FIELD',{source:'direct-enter',openReader:!isMobile()});return;}
+  if(opts.skipOnboarding){
+    S.phase='focused';S.surface='field';updatePhaseClass();
+    if(!isMobile()){await setReaderOpen(true,{waitTransition:true,transitionMs:520,measure:true});}
+    await nextFrame(); measureGraph(); await nextFrame();
+    const fid='FO.BLACK_BIRD_FIELD';
+    const ff=buildFocusSet(fid);
+    fitFocusFrame(ff,{duration:0});
+    endGraphHandoff();
+    await focusObject(fid,{source:'direct-enter',openReader:!isMobile(),camera:false});
+    return;
+  }
   startTacitOnboarding();
 }
 document.querySelectorAll('[data-enter]').forEach(b=>b.onclick=()=>enter());
