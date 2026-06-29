@@ -2,6 +2,79 @@
 
 This file is the canonical project log. Keep it in the repository root. Update it after every Claude Code round.
 
+## 2026-06-29 — Add compact About chamber (PR: Add compact About chamber)
+
+Branch: `claude/compact-about-chamber-u9tdoo`
+Base file: `index.html`
+
+### Decision
+
+Add an internal About chamber to The Black Bird — a compact, scrollable panel that explains the work without turning it into external documentation or a help site.
+
+About is an overlay/chamber, not a graph object. It does not add to Route, does not call `focusObject()`, does not change `S.activeId`, does not refit the graph or move the camera. Closing About restores the previous reading condition by design (the overlay approach means no reader state was displaced).
+
+### Implementation
+
+**State**: Added `S.aboutOpen` and `S.aboutOrigin` to the state object.
+
+**HTML elements added**:
+- `#thAboutBtn` — "About the work" secondary link below ENTER THE FIELD on threshold card
+- `#mobileAboutBtn` — small mono ABOUT button in map-wrap (mobile only, hidden in threshold/onboarding)
+- Rail ABOUT button: replaced `SRC` (data-action="sources") with `ABOUT` (data-action="about"). SRC's `openIndex('sources')` function is preserved internally.
+- `#aboutPanel` — new absolutely-positioned chamber with:
+  - Header: `About the Work` + close button
+  - Section nav: Statement · Read · Grammar · Source · Author (5 anchor buttons)
+  - `#aboutBody`: 5 sections with static content
+
+**CSS**:
+- `.about-panel`: z-index 35 desktop (above reader panel, below drawers at 30... correction: above drawers too since drawers are z-index 30), 42 mobile (above sheet at 40, below bottom-nav at 45), 65 when `.from-threshold` (above threshold at 60)
+- Desktop: slides in from right (`translateX(100%)` to `translateX(0)`), `width: min(640px, calc(100% - 56px))`, bounded to graph+panel area (not covering rail)
+- Mobile: full-width, `bottom: calc(56px + env(safe-area-inset-bottom,0px))` so bottom nav remains below it; `.from-threshold` removes bottom offset
+- `.th-about-link`: muted mono text link, amber underline on hover/focus
+- `.map-about-btn`: hidden desktop, block on mobile with `position:absolute; right:18px; top:20px`; hidden during phase-threshold/onboarding
+
+**JS functions**:
+- `openAbout(origin)`: closes drawers/sheet, sets `from-threshold` class, opens panel, marks rail btn active, resets scroll to top
+- `closeAbout()`: guard if not open; closes panel, removes active class — does NOT modify route, activeId, solo, view, or graph state
+- `jumpAboutSection(id)`: scrolls about-body to section offsetTop
+- Escape handler updated: `closeAbout()` called before `closeAllDrawers()` (safe, has early return guard)
+- Action binding: `a==='about'` → `openAbout('rail')`
+
+**Content** (5 sections, exact spec wording):
+1. Statement — 3 paragraphs
+2. How to Read — 7 tiles (FIELD/READ/INDEX/VIEW/SOLO/HIDE/ROUTE), 2-col desktop, 1-col mobile
+3. Object Grammar — intro + 6 cards (RNO/MNO/FO/NameO/RefO/RelO)
+4. Source and Code — intro + 4 source rows (Live work, GitHub repository, Citation, Version)
+5. Author — 1 paragraph
+
+**Source and Code link behavior**: Live work and GitHub links use real existing URLs, open in new tab with `rel="noopener"`. Version field shows "Current GitHub Pages release" (no commit loop). SRC rail button replaced by ABOUT; `openIndex('sources')` function internally preserved.
+
+### Changed files
+
+- `index.html`: CSS block, threshold HTML, map-wrap HTML, rail HTML, aboutPanel HTML, state, Escape handler, action bindings, About functions
+
+### Commands run
+
+- `npm run test:data` → PASS: all data integrity checks passed (50 nodes)
+- Manual Playwright smoke: 13 About-specific tests, all passed
+  - Threshold About link present and functional
+  - Threshold About opens with from-threshold class, closes to threshold
+  - Enter field works after closing threshold About
+  - Rail ABOUT present, SRC removed
+  - Route/activeId/viewOptions unchanged by open/close
+  - Escape closes About
+  - All 5 sections with correct labels
+  - Mobile ABOUT hidden threshold, visible field surface
+  - Mobile About opens; bottom nav has 4 items, no ABOUT
+  - S.aboutOpen/S.aboutOrigin state correct
+  - ABOUT rail btn active class toggles correctly
+
+### Known risks
+
+- `@playwright/test@1.45.0` in local node_modules expects chromium-1124 (not available); tests run using system playwright with system chromium-1194
+- About panel z-index (35) sits above drawers (30) on desktop — when About is open, drawers are inaccessible. This is intentional: `openAbout()` closes all drawers before opening About.
+- Mobile ABOUT button is inside `.map-wrap` (overflow:hidden) — positioned at right:18px top:20px, well within bounds.
+
 ## 2026-06-27 — Desktop handoff dissolve polish (PR #14)
 
 Branch: `claude/desktop-handoff-dissolve`
