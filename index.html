@@ -1271,6 +1271,7 @@ document.querySelectorAll('[data-action]').forEach(b=>b.onclick=async()=>{
 document.querySelectorAll('[data-mobile]').forEach(b=>b.onclick=async()=>{
   const a=b.dataset.mobile;
   if(a==='field'){
+    if(S.aboutOpen) closeAbout();
     if(isMobile()&&S.activeId){
       const fid=S.activeId;
       beginGraphHandoff();

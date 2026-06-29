@@ -2,6 +2,46 @@
 
 This file is the canonical project log. Keep it in the repository root. Update it after every Claude Code round.
 
+## 2026-06-29 — Fix mobile About Field return
+
+Branch: `claude/mobile-about-field-return`
+Base file: `index.html`
+
+### Decision
+
+Fix a one-interaction bug: when the mobile About sheet was open and the user tapped bottom-nav `Field`, About did not close — it remained visible over the graph.
+
+### Root cause
+
+The mobile `[data-mobile="field"]` handler called `closeAllDrawers()` and `closeSheet()` but not `closeAbout()`. The About panel is not a drawer and not the sheet, so it was never closed as part of that path. The rest of the Field-return logic (framing, aperture, `returnToField`) ran correctly but remained hidden under the open About panel.
+
+### Fix
+
+Added `if(S.aboutOpen) closeAbout();` at the top of the `if(a==='field')` block in the mobile bottom-nav handler, before the existing conditional that dispatches to the focused-object or `returnToField({source:'mobile-nav'})` path:
+
+```js
+if(a==='field'){
+  if(S.aboutOpen) closeAbout();
+  if(isMobile()&&S.activeId){ ... } else { returnToField({source:'mobile-nav'}); }
+  return;
+}
+```
+
+`closeAbout()` only clears `S.aboutOpen` and `S.aboutOrigin` and removes the panel's `open`/`from-threshold` classes — it does not touch `S.activeId`, `S.routeEvents`, `S.soloSet`, `S.objectVisibility`, `S.viewOptions`, or camera state.
+
+### Changed files
+
+- `index.html`: one line added to mobile bottom-nav Field handler
+
+### Commands run
+
+- `npm run test:data` → PASS: all data integrity checks passed (50 nodes)
+- Playwright 7/7 passed (mobile 390×844 + desktop 1280×800)
+
+### Known risks
+
+None.
+
 ## 2026-06-29 — Polish About chamber navigation and affordance
 
 Branch: `claude/about-chamber-polish`
