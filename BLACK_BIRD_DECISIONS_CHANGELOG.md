@@ -2,6 +2,49 @@
 
 This file is the canonical project log. Keep it in the repository root. Update it after every Claude Code round.
 
+## 2026-06-29 — Polish About chamber navigation and affordance
+
+Branch: `claude/about-chamber-polish`
+Base file: `index.html`
+
+### Decision
+
+Fix five concrete About-chamber regressions found after PR #15 merged: rough threshold link, wrong section-nav scroll offset, primitive close button, missing rail toggle, and mobile overflow risk.
+
+### Root causes
+
+- `.th-about-link` used `text-decoration:underline` + `display:block;text-align:left` — raw, left-stuck under Enter button, clipped browser underline.
+- `jumpAboutSection` used `el.offsetTop-16` which is relative to offset parent (not to scroll container), causing scroll to land past the section label.
+- Close button reused `.drawer-close` — wrong visual weight for this context.
+- Rail `data-action="about"` binding called `openAbout('rail')` unconditionally with no toggle check.
+- Mobile About panel had no `max-width:100vw` or `overflow:hidden` guard; tiles/cards lacked `min-width:0` protection.
+
+### Changes
+
+**A — Threshold About affordance**: Replaced crude `text-decoration:underline` approach with `text-decoration:none`, `text-transform:uppercase`, `color:var(--ghost)`, `text-align:center`, `min-width:190px` (matches Enter button), and a `::after` amber hairline that scales in on hover/focus. Mobile override adds `width:100%;min-width:0`.
+
+**B — Section nav scroll**: Rewrote `jumpAboutSection()` to use `getBoundingClientRect()` on both the body container and target section, computing scroll offset relative to the live container. Added `scroll-padding-top:28px` and `scroll-margin-top:28px` as CSS backup.
+
+**C — Panel visual refinement**: Added `.about-close` CSS rule (replaces `.drawer-close` reuse) with muted ghost color, transparent border on idle, `line2` border + bone color on hover/focus. Added `scrollbar-width:thin` to `.about-body`. Changed close button `class="drawer-close"` to `class="about-close"` in HTML.
+
+**D — Rail ABOUT toggle**: Changed action binding from `openAbout('rail')` to `if(S.aboutOpen) closeAbout(); else openAbout('rail')`.
+
+**E — Mobile overflow guards**: Added `.about-panel{max-width:100vw;overflow:hidden}`, `.about-body{overflow-x:hidden}`, `.about-nav{min-width:0}`, `.about-tile,.about-grammar-card,.about-source-row{min-width:0}` in mobile media query.
+
+### Changed files
+
+- `index.html`: About CSS, `jumpAboutSection()`, rail action binding, close button HTML class
+
+### Commands run
+
+- `npm run test:data` → PASS: all data integrity checks passed (50 nodes)
+- Playwright desktop 9/9 passed (1280×800, Chromium)
+- Playwright mobile 6/6 passed (390×844, Chromium)
+
+### Known risks
+
+- None beyond those noted in PR #15.
+
 ## 2026-06-29 — Add compact About chamber (PR: Add compact About chamber)
 
 Branch: `claude/compact-about-chamber-u9tdoo`

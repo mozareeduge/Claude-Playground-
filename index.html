@@ -212,20 +212,24 @@ button,input{font:inherit}
 @media (prefers-reduced-motion:reduce){*{transition:none!important;animation:none!important}}
 
 /* ── About chamber ─────────────────────────────────────────────────────────── */
-.th-about-link{background:transparent;border:0;color:var(--muted);font-family:var(--mono);font-size:11px;letter-spacing:.12em;cursor:pointer;margin-top:22px;padding:0;text-decoration:underline;text-decoration-color:transparent;transition:color .18s,text-decoration-color .18s;display:block;text-align:left;}
-.th-about-link:hover,.th-about-link:focus-visible{color:var(--bone);text-decoration-color:var(--amber);outline:none;}
+.th-about-link{background:transparent;border:0;color:var(--ghost);font-family:var(--mono);font-size:10px;letter-spacing:.16em;text-transform:uppercase;cursor:pointer;margin-top:16px;padding:0;text-decoration:none;transition:color .2s;display:block;text-align:center;min-width:190px;}
+.th-about-link::after{content:'';display:block;height:1px;background:var(--amber);transform:scaleX(0);transform-origin:center;transition:transform .24s ease;margin-top:5px;}
+.th-about-link:hover,.th-about-link:focus-visible{color:var(--muted);outline:none;}
+.th-about-link:hover::after,.th-about-link:focus-visible::after{transform:scaleX(.5);}
 .map-about-btn{display:none;}
 .about-panel{position:absolute;top:0;right:0;bottom:0;width:min(640px,calc(100% - 56px));background:linear-gradient(180deg,#0b0a09 0%,#070706 100%);border-left:1px solid var(--line);z-index:35;display:flex;flex-direction:column;transform:translateX(100%);transition:transform .34s cubic-bezier(.22,.8,.36,1),visibility 0s linear .34s;visibility:hidden;pointer-events:none;}
 .about-panel.open{transform:translateX(0);visibility:visible;pointer-events:auto;transition:transform .34s cubic-bezier(.22,.8,.36,1),visibility 0s;}
 .about-panel.from-threshold{z-index:65;}
+.about-close{border:1px solid transparent;background:transparent;color:var(--ghost);width:32px;height:32px;cursor:pointer;font-size:16px;display:flex;align-items:center;justify-content:center;transition:border-color .18s,color .18s;flex:0 0 auto;}
+.about-close:hover,.about-close:focus-visible{border-color:var(--line2);color:var(--bone);outline:none;}
 .about-head{height:62px;display:flex;align-items:center;justify-content:space-between;padding:0 18px;border-bottom:1px solid var(--line);font-family:var(--mono);letter-spacing:.22em;text-transform:uppercase;font-size:12px;flex:0 0 auto;}
 .about-nav{display:flex;align-items:center;padding:0 14px;height:44px;border-bottom:1px solid var(--line);flex:0 0 auto;overflow-x:auto;white-space:nowrap;gap:0;scrollbar-width:none;}
 .about-nav::-webkit-scrollbar{display:none;}
 .about-nav-btn{background:transparent;border:0;color:var(--muted);font-family:var(--mono);font-size:10px;letter-spacing:.14em;cursor:pointer;padding:4px 8px;}
 .about-nav-btn:hover,.about-nav-btn:focus-visible{color:var(--amber2);outline:none;}
 .about-nav-sep{color:var(--ghost);font-family:var(--mono);font-size:10px;flex:0 0 auto;padding:0 2px;}
-.about-body{flex:1;overflow-y:auto;padding:42px 52px 80px;scrollbar-color:#655d53 transparent;}
-.about-section{margin-bottom:52px;}
+.about-body{flex:1;overflow-y:auto;padding:42px 52px 80px;scrollbar-color:#655d53 transparent;scrollbar-width:thin;scroll-padding-top:28px;}
+.about-section{margin-bottom:52px;scroll-margin-top:28px;}
 .about-section-label{font-family:var(--mono);font-size:11px;letter-spacing:.2em;text-transform:uppercase;color:var(--muted);margin-bottom:18px;padding-bottom:10px;border-bottom:1px solid var(--line);}
 .about-tiles{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:4px;}
 .about-tile{border:1px solid var(--line);padding:16px 18px;background:#0a0908;}
@@ -249,11 +253,14 @@ button,input{font:inherit}
   .map-about-btn{display:block;position:absolute;right:18px;top:20px;pointer-events:auto;background:transparent;border:0;color:var(--muted);font-family:var(--mono);font-size:10px;letter-spacing:.14em;padding:4px;cursor:pointer;z-index:8;}
   .map-about-btn:hover,.map-about-btn:focus-visible{color:var(--text);outline:none;}
   .phase-threshold .map-about-btn,.phase-onboarding .map-about-btn{display:none!important;}
-  .about-panel{left:0;right:0;bottom:calc(56px + env(safe-area-inset-bottom,0px));width:100%;border-left:none;border-top:1px solid var(--line2);z-index:42;transform:translateX(100%);}
+  .th-about-link{width:100%;min-width:0;}
+  .about-panel{left:0;right:0;bottom:calc(56px + env(safe-area-inset-bottom,0px));width:100%;max-width:100vw;overflow:hidden;border-left:none;border-top:1px solid var(--line2);z-index:42;transform:translateX(100%);}
   .about-panel.from-threshold{bottom:0;z-index:65;}
   .about-tiles{grid-template-columns:1fr;}
   .about-tile.span-2{grid-column:span 1;}
-  .about-body{padding:28px 22px 48px;}
+  .about-body{padding:28px 22px 48px;overflow-x:hidden;}
+  .about-nav{min-width:0;}
+  .about-tile,.about-grammar-card,.about-source-row{min-width:0;}
   .about-source-row{grid-template-columns:110px 1fr;gap:10px;}
 }
 </style>
@@ -323,7 +330,7 @@ button,input{font:inherit}
   <div id="aboutPanel" class="about-panel" role="dialog" aria-label="About the Work" aria-hidden="true" inert>
     <div class="about-head">
       <span>About the Work</span>
-      <button id="aboutClose" class="drawer-close" aria-label="Close About the Work">×</button>
+      <button id="aboutClose" class="about-close" aria-label="Close About the Work">×</button>
     </div>
     <nav class="about-nav" aria-label="About sections">
       <button class="about-nav-btn" data-about-section="about-statement">Statement</button>
@@ -1259,7 +1266,7 @@ document.querySelectorAll('[data-action]').forEach(b=>b.onclick=async()=>{
   else if(a==='view') openDrawer('fieldViewDrawer');
   else if(a==='index') openIndex('all');
   else if(a==='sources') openIndex('sources');
-  else if(a==='about') openAbout('rail');
+  else if(a==='about'){ if(S.aboutOpen) closeAbout(); else openAbout('rail'); }
 });
 document.querySelectorAll('[data-mobile]').forEach(b=>b.onclick=async()=>{
   const a=b.dataset.mobile;
@@ -1388,9 +1395,14 @@ document.querySelectorAll('[data-enter]').forEach(b=>b.onclick=()=>enter());
 
 // ── About chamber ──────────────────────────────────────────────────────────
 function jumpAboutSection(id){
-  const el=document.getElementById(id);
   const body=document.getElementById('aboutBody');
-  if(el&&body) body.scrollTo({top:el.offsetTop-16,behavior:prefersReducedMotion()?'auto':'smooth'});
+  const target=document.getElementById(id);
+  if(!body||!target) return;
+  const pad=isMobile()?24:28;
+  const bodyRect=body.getBoundingClientRect();
+  const targetRect=target.getBoundingClientRect();
+  const nextTop=body.scrollTop+(targetRect.top-bodyRect.top)-pad;
+  body.scrollTo({top:Math.max(0,nextTop),behavior:prefersReducedMotion()?'auto':'smooth'});
 }
 function openAbout(origin){
   S.aboutOpen=true; S.aboutOrigin=origin;
